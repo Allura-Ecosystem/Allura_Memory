@@ -106,7 +106,8 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
   'forged in-process identity cannot mint authority',
   'human mutations require same-origin and login targets stay local',
 ] }, { requiredFile: './tests/gateway.test.ts', minAssertions: 29, requiredCases: [
-  'gateway authenticates before body and never trusts forged headers',
+  "gateway dynamic manifests reject ambiguous matches including implicit liveness","gateway dynamic and static share admission parser timing cancellation and response ceilings",
+ 'gateway authenticates before body and never trusts forged headers',
   'gateway rejects mixed identity on human routes before authority body or handler work',
   'gateway bounds streamed body rejects malformed JSON and cross-site',
   'gateway strictly decodes raw UTF8 and preserves split multibyte replacement characters',
@@ -142,7 +143,8 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
 ] }, {requiredFile:'./tests/core-config.test.ts',minAssertions:73,requiredCases:[
   'OAuth configuration explicitly binds a separate loopback issuer fixed public client and human consent origin',
   'OAuth configuration rejects ambiguous registration unsafe URLs and privilege fields without weakening human mode',
-  'core configuration binds loopback restricted login explicit origin and public RSA keys',
+  "work capability is disabled by default and only exact v1 enables human configuration",
+ 'core configuration binds loopback restricted login explicit origin and public RSA keys',
   'core configuration rejects missing secrets owner credentials remote databases and silent defaults',
  ] }, {requiredFile:'./tests/machine-only.test.ts',minAssertions:60,requiredCases:[
  'explicit machine-only configuration needs no human credentials and permits only canonical numeric loopback origins',
@@ -246,6 +248,13 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
     "work plane contract preserves the exact retained graph and six digit Gregorian tokens",
     "work plane contract rejects unsupported fields primitives accessors and raw duplicate key JSON",
     "work plane contract enforces exact UTF8 id reason and operation key boundaries without normalization"
+  ]
+},{
+  requiredFile: './tests/work-plane-http-contract.test.ts',
+  "minAssertions": 60,
+  "requiredCases": [
+    "work HTTP flat parser preserves exact strings whitespace and optional nulls",
+    "work HTTP flat parser rejects decoded duplicates overrides malformed primitives and bounds"
   ]
 }];
 if (process.argv.length !== 2) {

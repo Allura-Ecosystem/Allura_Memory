@@ -668,25 +668,48 @@ export async function runDbTests(url: string) {
     ]
   },
   {
-  "requiredFile": "./tests/work-plane.test.ts",
-  "requiredCases": [
-    "work plane ready transition commits one exact event receipt and microsecond token",
-    "work plane faults at every state event receipt and deferred boundary roll back exact history",
-    "work plane current authority and entitlement revocation serialize in both attributable database orders",
-    "work plane backend termination is unknown and leaves state event receipt unchanged",
-    "work plane finite operation cap permits exact replay and PostgreSQL digest binds canonical bytes",
-    "work plane restricted SQL forced RLS immutable history scoped FK and pool reuse cannot bypass authority",
-    "work plane unsupported foreign mapping and DTO storage bounds preserve semantic run and foreign snapshots",
-    "work plane device worker owner linked and selected authenticated clients cannot inherit work entitlements",
-    "work plane fresh process reconciles exact key after committed acknowledgement is withheld",
-    "work plane retained project and item caps reject owner fixture overflow without deleting history",
-    "work plane concurrent fresh exact keys accept one event and replay original bytes",
-    "work plane explicit entitlement actor mapping and nonhuman denials disclose no private state",
-    "work plane same token concurrency exact shared key replay and current read stay distinct",
-    "work plane invalid graph stale microseconds terminal reopen and unsupported evidence are unchanged",
-    "work plane microseconds advance in one transaction through regressed clocks and overflow fails closed"
-  ]
-}
+    "requiredFile": "./tests/work-plane.test.ts",
+    "requiredCases": [
+      "work plane ready transition commits one exact event receipt and microsecond token",
+      "work plane faults at every state event receipt and deferred boundary roll back exact history",
+      "work plane current authority and entitlement revocation serialize in both attributable database orders",
+      "work plane backend termination is unknown and leaves state event receipt unchanged",
+      "work plane finite operation cap permits exact replay and PostgreSQL digest binds canonical bytes",
+      "work plane restricted SQL forced RLS immutable history scoped FK and pool reuse cannot bypass authority",
+      "work plane unsupported foreign mapping and DTO storage bounds preserve semantic run and foreign snapshots",
+      "work plane device worker owner linked and selected authenticated clients cannot inherit work entitlements",
+      "work plane fresh process reconciles exact key after committed acknowledgement is withheld",
+      "work plane retained project and item caps reject owner fixture overflow without deleting history",
+      "work plane concurrent fresh exact keys accept one event and replay original bytes",
+      "work plane explicit entitlement actor mapping and nonhuman denials disclose no private state",
+      "work plane same token concurrency exact shared key replay and current read stay distinct",
+      "work plane invalid graph stale microseconds terminal reopen and unsupported evidence are unchanged",
+      "work plane microseconds advance in one transaction through regressed clocks and overflow fails closed"
+    ]
+  },
+  {
+    "requiredFile": "./tests/work-plane-http.test.ts",
+    "requiredCases": [
+      "work HTTP opaque path segments decode once and never alias malformed or literal percent IDs",
+      "work HTTP strict header selectors flat streamed body and fatal UTF8 reject without effects",
+      "work HTTP denies forged mixed org unentitled revoked and machine only identities before body",
+      "work HTTP concurrent keys stale graph terminal and rollback outcomes preserve private history",
+      "work HTTP current base authority and entitlement revocation serialize both attributable lock orders",
+      "work HTTP backend termination is unknown and capacity preserves exact authorized replay",
+      "work HTTP loopback response loss after commit reconciles in a fresh server process exactly once",
+      "work HTTP exact signed expiry and postcommit revocation deny disclosure without undoing history",
+      "work HTTP unsupported mapping foreign scope and pooled current reads remain private",
+      "work HTTP authenticated device worker delegated and selected clients cannot inherit work entitlements",
+      "work HTTP service refuses original principal binding drift even when restored before disclosure",
+      "work plane signed HTTP transition preserves opaque ID receipt bytes and current read"
+    ]
+  },
+  {
+    "requiredFile": "./tests/run-work-plane-upgrade.test.ts",
+    "requiredCases": [
+      "run revision eight HTTP upgrade preserves genuine revision seven histories and refuses old execution"
+    ]
+  }
 ];
   const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));
   await runDbBatches({ suites, batches, timeoutMs: 240000, minAssertions: 40,

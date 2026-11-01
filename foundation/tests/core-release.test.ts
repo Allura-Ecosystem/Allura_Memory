@@ -1,5 +1,5 @@
 import {test,expect,beforeAll,afterAll} from 'bun:test';
-import {mkdtemp,writeFile,readFile,rm,stat,rename,mkdir,chmod,symlink} from 'node:fs/promises';
+import {mkdtemp,writeFile,readFile,rm,stat,rename,mkdir,chmod,symlink,cp} from 'node:fs/promises';
 import {join,dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {tmpdir} from 'node:os';
@@ -11,6 +11,7 @@ import {parseBumblebeeWire} from '../src/bumblebee-wire.ts';
 import {runBumblebeeScan} from '../src/bumblebee-runner.ts';
 import {SQL} from 'bun';
 import {packCore} from '../scripts/pack-core.ts';
+import {verifyCoreRelease} from '../src/core-release.ts';
 import {createRecoveryTarget,recoveryConnection,restartRecoveryTarget,closeRecoveryTarget,type RecoveryTarget} from '../src/recovery-target.ts';
 import {fixture} from './lifecycle-fixture.ts';
 import {AlluraClient} from '../src/consumer-client.ts';
@@ -27,15 +28,47 @@ async function stop(){if(child){child.kill('SIGTERM');await child.exited;child=u
 beforeAll(async()=>{
  directory=await mkdtemp(join(tmpdir(),'allura-core-clean-'));const artifact=await packCore();expect(createHash('sha256').update(await readFile(artifact.tarball)).digest('hex')).toBe(artifact.sha256);
  expect(Bun.spawnSync(['tar','-xzf',artifact.tarball,'-C',directory],{stdout:'pipe',stderr:'pipe'}).exitCode).toBe(0);const node=Bun.spawnSync(['node','-p','process.execPath'],{stdout:'pipe',stderr:'pipe'});expect(node.exitCode).toBe(0);
+ const migration='migrations/033-work-plane-http-run8.sql',release=await verifyCoreRelease(directory),migrationBytes=await readFile(new URL('../'+migration,import.meta.url));
+ expect(release.inputs[migration]).toBe(createHash('sha256').update(migrationBytes).digest('hex'));expect(await readFile(join(directory,migration))).toEqual(migrationBytes);
  environment={PATH:[dirname(node.stdout.toString().trim()),dirname(process.execPath),process.env.PATH].join(':'),HOME:directory,TMPDIR:tmpdir(),BUN_INSTALL_CACHE_DIR:join(tmpdir(),'allura-core-dependency-cache')};
- expect((await run([process.execPath,'run','install:frozen'])).exit).toBe(0);expect((await run([process.execPath,'run','prepare:model'])).exit).toBe(0);
+ const offlineCache=process.env.ALLURA_TEST_OFFLINE_PACKAGE_CACHE;
+ if(offlineCache){
+  // Fixture-only Linux cache lane: genuine clean install, immutable packed sources,
+  // and real model preparation/inference; no download-path coverage is claimed.
+  // A private cache copy prevents the installer from modifying shared caches.
+  environment.BUN_INSTALL_CACHE_DIR=join(directory,'dependency-cache');
+  await cp(offlineCache,environment.BUN_INSTALL_CACHE_DIR,{recursive:true,dereference:true});
+  const isolated=['unshare','--user','--map-root-user','--net'];
+  expect((await run([...isolated,process.execPath,'run','install:frozen'])).exit).toBe(0);
+  expect(await readFile(join(directory,'bun.lock'))).toEqual(await readFile(new URL('../bun.lock',import.meta.url)));
+  // Digests of the installed revision-qualified inputs retained in the admission
+  // dependency inventory; these are fixture pins, not new production model policy.
+  const modelPrefix='Xenova/all-MiniLM-L6-v2/751bff37182d3f1213fa05d7196b954e230abad9',modelInputs={
+   'config.json':'7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7',
+   'tokenizer_config.json':'9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3',
+   'tokenizer.json':'da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0',
+   'onnx/model_quantized.onnx':'afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1'
+  };
+  for(const [file,digest] of Object.entries(modelInputs)){
+   const bytes=await readFile(new URL('../node_modules/.cache/allura-models/'+modelPrefix+'/'+file,import.meta.url));expect(createHash('sha256').update(bytes).digest('hex')).toBe(digest);
+   const destination=join(directory,'node_modules/.cache/allura-models',modelPrefix,file);await mkdir(dirname(destination),{recursive:true});await writeFile(destination,bytes);expect(createHash('sha256').update(await readFile(destination)).digest('hex')).toBe(digest);
+  }
+  // Fail on any fetch attempt, not merely on a failed connection. Namespace
+  // isolation also prevents native dependency or installer network access.
+  const guard=join(directory,'offline-fetch-guard.ts');await writeFile(guard,"globalThis.fetch=(()=>{throw new Error('offline_fixture_fetch_forbidden');}) as typeof fetch;\n");
+  const prepared=await run([...isolated,process.execPath,'--preload',guard,'scripts/prepare-model.ts']);expect(prepared.exit).toBe(0);expect(JSON.parse(prepared.stdout)).toMatchObject({dimensions:384,inference:'exercised'});
+  await rm(guard);expect(await verifyCoreRelease(directory)).toEqual(release);
+  console.log(JSON.stringify({offlinePackedFixture:{install:'clean-frozen-lockfile-private-cache',network:'isolated-namespace-and-fetch-denial',modelInputs,modelPreparation:'actual-packed-script-and-inference',downloadCoverage:false}}));
+ }else{
+  expect((await run([process.execPath,'run','install:frozen'])).exit).toBe(0);expect((await run([process.execPath,'run','prepare:model'])).exit).toBe(0);
+ }
  target=await createRecoveryTarget();const password=randomBytes(32).toString('hex'),ownerUrl=await recoveryConnection(target);
  const initialized=await run([process.execPath,'run','init:empty'],{...environment,ALLURA_INIT_DATABASE_URL:ownerUrl,ALLURA_INIT_APP_PASSWORD:password});expect(initialized.exit).toBe(0);expect(initialized.stdout).toContain('initialized');expect(initialized.stderr).not.toContain(password);
  const owner=new SQL(ownerUrl);try{expect((await owner`SELECT count(*)::integer AS n FROM allura.events`)[0].n).toBe(0);expect((await owner`SELECT count(*)::integer AS n FROM allura.principals`)[0].n).toBe(0);}finally{await owner.close();}
  f=await fixture('allura-core-package',ownerUrl);credential=randomBytes(32).toString('base64url');await f.owner`INSERT INTO allura.machine_credentials(principal_id,digest,group_id,workspace_id,actions,expires_at) VALUES(${f.ids.machine}::uuid,decode(${createHash('sha256').update(credential).digest('hex')},'hex'),${f.scope.groupId},${f.scope.workspaceId}::uuid,ARRAY['memory:read','memory:capture'],clock_timestamp()+interval '1 hour')`;
  environment.ALLURA_DATABASE_URL=f.appUrl;environment.ALLURA_CURSOR_KEY=randomBytes(32).toString('base64url');await writeFile(join(directory,'config.json'),JSON.stringify({origin:'https://core.invalid',issuer:f.humanConfig.issuer,audience:f.humanConfig.audience,port:0,keys:[{kid:'key',pem:f.humanConfig.keys.get('key')!.export({type:'spki',format:'pem'}).toString()}]}));
  scannerEvidenceId=JSON.parse(await capture(f.app,f.identities.machine,f.scope,{idempotency_key:randomUUID(),content:'Owned scanner fixture authorization'})).event_id;
- console.log(JSON.stringify({coreArtifact:artifact,cleanInstall:true,publicModelPrepared:true}));
+ console.log(JSON.stringify({coreArtifact:artifact,cleanInstall:true,publicModelPrepared:!offlineCache,offlineModelPrepared:!!offlineCache}));
 },240000);
 afterAll(async()=>{await stop();await f?.app.close();await f?.owner.close();if(target){await closeRecoveryTarget(target);}if(directory){await rm(directory,{recursive:true,force:true});}},60000);
 test('packed DOC-J01 through DOC-J06 journey preserves review atomicity replay provenance and current retrieval',async()=>{
@@ -91,7 +124,7 @@ test('packed recovery backs up and restores without a source checkout or git pro
    const destination=await createRecoveryTarget();targets.push(destination);await restoreRecovery(destination,manifestPath);const restored=new SQL(await recoveryConnection(destination));connections.push(restored);const [row]=await restored.unsafe('SELECT value FROM public.package_witness');
    console.log(JSON.stringify({marker:row.value,migrations:manifest.migrations.length,releaseProvenance:true}));
   }finally{for(const connection of connections){await connection.close();}for(const target of targets.reverse()){await closeRecoveryTarget(target);}await rm(output,{recursive:true,force:true});}
- `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:32,releaseProvenance:true});
+ `],{PATH:environment.PATH!,HOME:directory,TMPDIR:tmpdir(),DOCKER_HOST:dockerHost});expect(result.exit).toBe(0);expect(JSON.parse(result.stdout)).toEqual({marker:'packed archive selected exactly',migrations:33,releaseProvenance:true});
 },120000);
 test('packed dashboard serves integrity bound browser assets without granting anonymous content',async()=>{
  await start();try{const base=new URL('/dashboard',endpoint),shell=await fetch(base);expect(shell.status).toBe(200);expect(shell.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");expect(shell.headers.get('cache-control')).toBe('no-store');const html=await shell.text();expect(html).toContain('/assets/app.js');expect(html).not.toContain(f.scope.groupId);
@@ -139,5 +172,12 @@ test('packed core leases actual pinned scanner evidence over verified TLS withou
  }finally{await stop();delete environment.ALLURA_BUMBLEBEE_LEASE_KEY;delete environment.ALLURA_BUMBLEBEE_REDACTION_KEY;await writeFile(join(directory,'config.json'),original);}
 },90000);
 test('packed core refuses tampered source before database work and never prints injected credentials',async()=>{
+ const migration='migrations/033-work-plane-http-run8.sql',migrationPath=join(directory,migration),original=await readFile(migrationPath),manifestPath=join(directory,'release.json'),manifestBytes=await readFile(manifestPath),release=await verifyCoreRelease(directory);
+ try{await writeFile(migrationPath,Buffer.concat([original,Buffer.from('\n-- deliberate migration integrity fault\n')]));await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');}finally{await writeFile(migrationPath,original);}
+ expect(await verifyCoreRelease(directory)).toEqual(release);
+ for(const file of ['migrations/033-work-plane-http-run9.sql','migrations/034-work-plane-http-run8.sql','migrations/33-work-plane-http-run8.sql','migrations/033-work-plane-http-run88.sql','migrations/033-work-plane-http-run8.sql.bak','033-work-plane-http-run8.sql']){
+  const path=join(directory,file);try{await writeFile(path,original);await writeFile(manifestPath,JSON.stringify({...release,inputs:{...release.inputs,[file]:release.inputs[migration]}}));await expect(verifyCoreRelease(directory)).rejects.toThrow('core_release_integrity');}finally{await writeFile(manifestPath,manifestBytes);await rm(path);}
+ }
+ expect(await verifyCoreRelease(directory)).toEqual(release);
  const path=join(directory,'src/core-api.ts');expect((await stat(path)).isSymbolicLink()).toBe(false);await writeFile(path,(await readFile(path,'utf8'))+'\n// deliberate integrity fault\n');const denied=await run([process.execPath,'src/core-server.ts','config.json']);expect(denied.exit).toBe(1);expect(denied.stdout).not.toContain('listening');expect(denied.stderr).not.toContain(environment.ALLURA_DATABASE_URL!);expect(denied.stderr).not.toContain(environment.ALLURA_CURSOR_KEY!);
 });

@@ -4,13 +4,14 @@ import {type BumblebeeScannerOptions} from './bumblebee-lease-api.ts';
 import {type HumanConfig} from './authentication.ts';
 export type EmbeddingConfig=Readonly<{provider:'openai';model:'text-embedding-3-small';dimensions:384}>;
 export type OAuthConfig=Readonly<{host:'127.0.0.1';port:number;issuer:string;resource:string;consentOrigin:string;client:Readonly<{clientId:string;name:string;redirectUris:readonly string[];actions:readonly string[]}>}>;
-export type CoreConfig={oauth?:OAuthConfig;host:'127.0.0.1';port:number;origin:string;mode:'human'|'machine-only';human:HumanConfig|undefined;databaseUrl:string;cursorKey:Uint8Array;embedding?:EmbeddingConfig;scanner?:BumblebeeScannerOptions;tls?:Readonly<{certificateFile:string;privateKeyFile:string}>};
+export type CoreConfig={workCapability?:'work-plane-compatibility-v1';oauth?:OAuthConfig;host:'127.0.0.1';port:number;origin:string;mode:'human'|'machine-only';human:HumanConfig|undefined;databaseUrl:string;cursorKey:Uint8Array;embedding?:EmbeddingConfig;scanner?:BumblebeeScannerOptions;tls?:Readonly<{certificateFile:string;privateKeyFile:string}>};
 export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,string|undefined>>):CoreConfig{
  try{
   if(!raw||typeof raw!=='object'||Array.isArray(raw)){throw new Error();}const input=raw as Record<string,unknown>;
   const mode=Object.hasOwn(input,'mode')?input.mode:'human';if(!['human','machine-only'].includes(mode as string)||!Number.isSafeInteger(input.port)||(input.port as number)<0||(input.port as number)>65535||typeof input.origin!=='string'){throw new Error();}
-  const machineOnly=mode==='machine-only',allowed=machineOnly?['mode','origin','port','tls','scanner','embedding']:['mode','origin','issuer','audience','port','keys','scanner','tls','embedding','oauth'];
+  const machineOnly=mode==='machine-only',allowed=machineOnly?['mode','origin','port','tls','scanner','embedding']:['mode','origin','issuer','audience','port','keys','scanner','tls','embedding','oauth','workCapability'];
   if(Object.keys(input).some(k=>!allowed.includes(k))){throw new Error();}
+  if(Object.hasOwn(input,'workCapability')&&input.workCapability!=='work-plane-compatibility-v1'){throw new Error();}
   const origin=new URL(input.origin);if(origin.origin!==input.origin||origin.username||origin.password){throw new Error();}
   let human:HumanConfig|undefined;
   if(machineOnly){if(!['http:','https:'].includes(origin.protocol)||origin.hostname!=='127.0.0.1'||Number(origin.port||(origin.protocol==='https:'?'443':'80'))!==input.port){throw new Error();}}
@@ -42,6 +43,6 @@ export function parseCoreConfig(raw:unknown,environment:Readonly<Record<string,s
    if(!Array.isArray(c.actions)||c.actions.length<1||c.actions.length>ceiling.length||new Set(c.actions).size!==c.actions.length||c.actions.some(v=>!ceiling.includes(v))){throw new Error();}
    oauth=Object.freeze({host:'127.0.0.1',port:o.port as number,issuer:o.issuer as string,resource:o.resource as string,consentOrigin:o.consentOrigin as string,client:Object.freeze({clientId:c.clientId,name:c.name,redirectUris:Object.freeze([...c.redirectUris]) as readonly string[],actions:Object.freeze([...c.actions]) as readonly string[]})});
   }
-  return {host:'127.0.0.1',port:input.port as number,origin:input.origin,mode:mode as CoreConfig['mode'],human,databaseUrl:supplied,cursorKey,...(oauth?{oauth}:{}),...(embedding?{embedding}:{}),...(tls?{tls}:{}),...(scanner?{scanner}:{})};
+  return {...(input.workCapability==='work-plane-compatibility-v1'?{workCapability:'work-plane-compatibility-v1' as const}:{}),host:'127.0.0.1',port:input.port as number,origin:input.origin,mode:mode as CoreConfig['mode'],human,databaseUrl:supplied,cursorKey,...(oauth?{oauth}:{}),...(embedding?{embedding}:{}),...(tls?{tls}:{}),...(scanner?{scanner}:{})};
  }catch{throw new Error('core_configuration_invalid');}
 }

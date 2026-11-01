@@ -37,7 +37,7 @@ export async function verifyCoreRelease(root:string):Promise<CoreRelease>{
   for(const required of ['src/core-server.ts','src/core-init.ts','src/core-config.ts','src/core-api.ts','src/core-release.ts','src/embedding.ts','src/persistence.ts','src/dashboard-server.ts','dashboard/app.js','dashboard/app.css','dashboard/allura-lettermark.png','bun.lock','package.json']){if(!hash(release.inputs[required])){throw new Error();}}
   const assets=await readdir(join(root,'dashboard'));if(assets.length>32||assets.length!==Object.keys(release.inputs).filter(p=>p.startsWith('dashboard/')).length||assets.some(p=>!hash(release.inputs['dashboard/'+p]))){throw new Error();}
   for(const [file,digest] of Object.entries(release.inputs)){
-   if(!hash(digest)||!/^(src\/[a-z-]+\.ts|migrations\/[0-9]{3}-[a-z-]+\.sql|scripts\/(check-toolchain|prepare-model)\.ts|dashboard\/[A-Za-z0-9_.-]+\.(js|css|woff2|png)|README\.md|package\.json|bun\.lock)$/.test(file)){throw new Error();}
+   if(!hash(digest)||!/^(src\/[a-z-]+\.ts|migrations\/[0-9]{3}-[a-z-]+\.sql|migrations\/033-work-plane-http-run8\.sql|scripts\/(check-toolchain|prepare-model)\.ts|dashboard\/[A-Za-z0-9_.-]+\.(js|css|woff2|png)|README\.md|package\.json|bun\.lock)$/.test(file)){throw new Error();}
    const path=join(root,file),metadata=await lstat(path);if(!metadata.isFile()||metadata.isSymbolicLink()||metadata.size>2*1024*1024||createHash('sha256').update(await readFile(path)).digest('hex')!==digest){throw new Error();}
   }
   return release;

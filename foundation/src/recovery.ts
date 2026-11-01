@@ -15,7 +15,7 @@ type Manifest={format:'allura-recovery-v1';id:string;sourceTarget:string;created
 const hash=(v:Uint8Array|string)=>createHash('sha256').update(v).digest('hex');
 const sha=(v:unknown,n=64)=>typeof v==='string'&&v.length===n&&/^[0-9a-f]+$/.test(v);
 const keys=(v:unknown,names:string[])=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===names.length&&Object.keys(v).every(k=>names.includes(k));
-async function migrations():Promise<Migration[]>{const files=(await readdir(join(root,'migrations'))).filter(n=>/^\d{3}-[a-z-]+\.sql$/.test(n)).sort();return Promise.all(files.map(async(name,i)=>({version:i+1,digest:hash(await readFile(join(root,'migrations',name)))})));}
+async function migrations():Promise<Migration[]>{const files=(await readdir(join(root,'migrations'))).filter(n=>/^(?:\d{3}-[a-z-]+\.sql|033-work-plane-http-run8\.sql)$/.test(n)).sort();return Promise.all(files.map(async(name,i)=>({version:i+1,digest:hash(await readFile(join(root,'migrations',name)))})));}
 async function provenance():Promise<Manifest['source']>{
  const inputs:Record<string,string>={};for(const file of ['package.json','bun.lock',...(await readdir(join(root,'src'))).filter(n=>n.endsWith('.ts')).map(n=>'src/'+n)]){inputs[file]=hash(await readFile(join(root,file)));}
  if(await Bun.file(join(root,'release.json')).exists()){

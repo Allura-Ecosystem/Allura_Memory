@@ -1,10 +1,10 @@
 import { test, expect } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { parseStartRun, parseRunCommand, parseRunDecision, runDefinition } from '../src/run-contract.ts';
-const base = () => ({ operationKey: 'start:fixture.1', definitionId: 'local-evidence-handoff' as const, definitionRevision: 7 as const, goal: ' Exact goal ', reviewerPrincipalId: '11111111-1111-4111-8111-111111111111', artifact: { text: 'Synthetic\r\nCafe\u0301 🧠', expectedSha256: 'a'.repeat(64), sourceRevision: null as string | null } });
+const base = () => ({ operationKey: 'start:fixture.1', definitionId: 'local-evidence-handoff' as const, definitionRevision: 8 as const, goal: ' Exact goal ', reviewerPrincipalId: '11111111-1111-4111-8111-111111111111', artifact: { text: 'Synthetic\r\nCafe\u0301 🧠', expectedSha256: 'a'.repeat(64), sourceRevision: null as string | null } });
 
 test('run revision seven admission preserves historical parser revisions', () => {
-  for (const definitionRevision of [1,2,3,4,5,6,7]) { expect<number>(parseStartRun({ ...base(), definitionRevision }).definitionRevision).toBe(definitionRevision); }
+  for (const definitionRevision of [1,2,3,4,5,6,7,8]) { expect<number>(parseStartRun({ ...base(), definitionRevision }).definitionRevision).toBe(definitionRevision); }
 });
 
 test('run contract rejects authority policy and executable input overrides', () => {
@@ -23,7 +23,7 @@ test('run contract rejects authority policy and executable input overrides', () 
   expect(parseRunDecision({ ...decision, rationale: '🧠'.repeat(250), decision: 'reject' }).rationale).toBe('🧠'.repeat(250));
   expect(Object.isFrozen(parseRunCommand(command))).toBe(true);
   for (const value of [null, [], {}, { ...command, outcome: 'succeeded' }, { ...command, fence: 1 }, { ...command, expectedRevision: NaN }, { ...command, expectedRevision: Infinity }, { ...command, expectedRevision: 1.1 }, { ...command, expectedRevision: 0 }, { ...command, expectedRevision: 2147483648 }, { ...command, expectedRevision: '1' }, { ...command, runId: 'bad' }, { ...command, operationKey: 'x\n' }]) { expect(() => parseRunCommand(value)).toThrow('run_invalid'); }
-  for (const value of [null, [], 1, true, 'run', {}, { ...v, actorPrincipalId: v.reviewerPrincipalId }, { ...v, groupId: 'allura-other' }, { ...v, workspaceId: v.reviewerPrincipalId }, { ...v, policy: {} }, { ...v, handler: 'shell' }, { ...v, outcome: 'succeeded' }, { ...v, passed: true }, { ...v, definitionId: 'other' }, { ...v, definitionRevision: '1' }, { ...v, definitionRevision: 8 }, { ...v, definitionRevision: null }, { ...v, artifact: null }, { ...v, artifact: [] }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, artifact: { ...v.artifact, sourceRevision: undefined } }, { ...v, reviewerPrincipalId: 'other' }, { ...v, reviewerPrincipalId: null }]) {
+  for (const value of [null, [], 1, true, 'run', {}, { ...v, actorPrincipalId: v.reviewerPrincipalId }, { ...v, groupId: 'allura-other' }, { ...v, workspaceId: v.reviewerPrincipalId }, { ...v, policy: {} }, { ...v, handler: 'shell' }, { ...v, outcome: 'succeeded' }, { ...v, passed: true }, { ...v, definitionId: 'other' }, { ...v, definitionRevision: '1' }, { ...v, definitionRevision: 9 }, { ...v, definitionRevision: null }, { ...v, artifact: null }, { ...v, artifact: [] }, { ...v, artifact: { ...v.artifact, passed: true } }, { ...v, artifact: { ...v.artifact, sourceRevision: undefined } }, { ...v, reviewerPrincipalId: 'other' }, { ...v, reviewerPrincipalId: null }]) {
     expect(() => parseStartRun(value)).toThrow('run_invalid');
   }
   for (const key of Object.keys(v)) { const missing: Record<string, unknown> = { ...v }; delete missing[key]; expect(() => parseStartRun(missing)).toThrow('run_invalid'); }
@@ -48,9 +48,9 @@ test('run start input preserves exact bounded UTF8 bytes and immutable copies', 
 
 test('run start definition pins owned source and fixed data only policy', async () => {
   const definition = await runDefinition(), hash = createHash('sha256');
-  for (const name of ['run-contract.ts', 'runs.ts', 'runs-api.ts', 'gateway.ts', 'run-execution.ts', '../migrations/025-durable-runs.sql', '../migrations/026-run-prepare.sql', '../migrations/027-run-decision.sql', '../migrations/028-run-resume.sql', '../migrations/029-run-cancel.sql', '../migrations/030-run-inspection.sql', '../migrations/031-run-prepare-expiry.sql']) { const bytes = new Uint8Array(await Bun.file(new URL('../src/' + name, import.meta.url)).arrayBuffer()); hash.update(`${name}\0${bytes.length}\0`).update(bytes); }
+  for (const name of ['run-contract.ts', 'runs.ts', 'runs-api.ts', 'gateway.ts', 'run-execution.ts', '../migrations/025-durable-runs.sql', '../migrations/026-run-prepare.sql', '../migrations/027-run-decision.sql', '../migrations/028-run-resume.sql', '../migrations/029-run-cancel.sql', '../migrations/030-run-inspection.sql', '../migrations/031-run-prepare-expiry.sql', '../migrations/033-work-plane-http-run8.sql']) { const bytes = new Uint8Array(await Bun.file(new URL('../src/' + name, import.meta.url)).arrayBuffer()); hash.update(`${name}\0${bytes.length}\0`).update(bytes); }
   expect(definition.handlerBundleDigest).toBe(hash.digest('hex'));
-  expect(definition.id).toBe('local-evidence-handoff'); expect(definition.revision).toBe(7);
+  expect(definition.id).toBe('local-evidence-handoff'); expect(definition.revision).toBe(8);
   expect(definition.steps.map(s => s.id)).toEqual(['prepare', 'review', 'handoff']);
   expect(definition.policy.allowedHandlers).toEqual(['local-artifact-check-v1', 'local-handoff-receipt-v1']);
   expect(definition.policy.independentReviewer).toBe(true);

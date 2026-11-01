@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { createGateway } from '../src/gateway.ts';
+import { createGateway, SerializedJsonReply } from '../src/gateway.ts';
 import type { AuthorityRecord, AuthorityStore } from '../src/authority.ts';
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const config = { issuer: 'https://fixture.cloudflareaccess.com', audience: 'fixture', keys: new Map([['key', publicKey]]) };
@@ -13,6 +13,42 @@ const row: AuthorityRecord = { ...scope, principalId: '22222222-2222-4222-8222-2
 const query = `?group_id=${scope.groupId}&workspace_id=${scope.workspaceId}`;
 const store: AuthorityStore = { resolve: async () => row };
 const headers = { 'Cf-Access-Jwt-Assertion': jwt, Origin: origin, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' };
+
+
+test('gateway dynamic manifests reject ambiguous matches including implicit liveness',()=>{
+ const base={method:'GET' as const,identity:'human' as const,action:'memory:read' as const,handle:async()=>({})};
+ for(const routes of [
+  [{...base,path:'/x/:id',dynamic:true},{...base,path:'/x/literal'}],
+  [{...base,path:'/x/literal'},{...base,path:'/x/:id',dynamic:true}],
+  [{...base,path:'/:a/fixed',dynamic:true},{...base,path:'/fixed/:b',dynamic:true}],
+  [{...base,path:'/health/:id',dynamic:true}],
+  [{...base,path:'/:id/:id',dynamic:true}],
+ ]){expect(()=>createGateway({human:config,origin,store,machineLookup:async()=>null,routes})).toThrow('invalid route manifest');}
+ const staticOnly=createGateway({human:config,origin,store,machineLookup:async()=>null,routes:[{...base,path:'/x/:id'}]});
+ expect(staticOnly).toBeFunction();
+});
+test('gateway dynamic and static share admission parser timing cancellation and response ceilings',async()=>{
+ let finish!:()=>void,parser=0,authority=0,handler=0,cancelled=false;
+ const pending=new Promise<void>(r=>{finish=r;});
+ const base={identity:'human' as const,action:'memory:read' as const};
+ const gateway=createGateway({human:config,origin,store:{resolve:async()=>{authority++;return row;}},machineLookup:async()=>null,limits:{concurrency:1,timeoutMs:25,responseBytes:64},routes:[
+  {...base,path:'/slow/:id',dynamic:true,method:'GET',timeoutStatus:503,handle:async()=>{await pending;return {}; }},
+  {...base,path:'/static',method:'GET',handle:async()=>({})},
+  {...base,path:'/large/:id',dynamic:true,method:'GET',handle:async()=>new SerializedJsonReply(JSON.stringify({private:'x'.repeat(65)}))},
+  {...base,path:'/body/:id',dynamic:true,method:'POST',timeoutStatus:503,parseBody:text=>{parser++;return JSON.parse(text);},handle:async()=>{handler++;return {}; }},
+ ]});
+ for(const h of [{'Cf-Access-Jwt-Assertion':jwt},{Cookie:`CF_Authorization=${jwt}`}]){
+  const req=new Request(`${origin}/body/id${query}`,{method:'POST',headers:{...headers,...h,Authorization:'Bearer synthetic'},body:'{}'});
+  expect((await gateway(req)).status).toBe(401);expect(req.bodyUsed).toBe(false);
+ }
+ expect(authority).toBe(0);expect(parser).toBe(0);expect(handler).toBe(0);
+ expect((await gateway(new Request(`${origin}/slow/id${query}`,{headers}))).status).toBe(503);
+ expect((await gateway(new Request(`${origin}/static${query}`,{headers}))).status).toBe(429);
+ finish();await Bun.sleep(5);expect((await gateway(new Request(`${origin}/static${query}`,{headers}))).status).toBe(200);
+ expect((await gateway(new Request(`${origin}/large/id${query}`,{headers}))).status).toBe(503);
+ const stalled=new ReadableStream<Uint8Array>({cancel(){cancelled=true;}},{highWaterMark:0});
+ expect((await gateway(new Request(`${origin}/body/id${query}`,{method:'POST',headers,body:stalled}))).status).toBe(503);expect(cancelled).toBe(true);expect(parser).toBe(0);expect(handler).toBe(0);
+});
 
 test('gateway authenticates before body and never trusts forged headers', async () => {
   let calls = 0;

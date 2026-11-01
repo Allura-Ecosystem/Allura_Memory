@@ -4,6 +4,12 @@ import {parseCoreConfig} from '../src/core-config.ts';
 const {publicKey,privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
 const config={origin:'https://core.invalid',issuer:'https://core.cloudflareaccess.com',audience:'fixture',port:0,keys:[{kid:'fixture',pem:publicKey.export({type:'spki',format:'pem'}).toString()}]};
 const environment={ALLURA_DATABASE_URL:'postgres://allura_app:synthetic-test-only@127.0.0.1:15432/allura_test',ALLURA_CURSOR_KEY:randomBytes(32).toString('base64url')};
+test('work capability is disabled by default and only exact v1 enables human configuration',()=>{
+ expect(parseCoreConfig(config,environment)).not.toHaveProperty('workCapability');
+ expect(parseCoreConfig({...config,workCapability:'work-plane-compatibility-v1'},environment)).toHaveProperty('workCapability','work-plane-compatibility-v1');
+ for(const workCapability of [null,false,true,'','v1','work-plane-compatibility-v2']){expect(()=>parseCoreConfig({...config,workCapability},environment)).toThrow('core_configuration_invalid');}
+ expect(()=>parseCoreConfig({mode:'machine-only',port:18442,origin:'http://127.0.0.1:18442',workCapability:'work-plane-compatibility-v1'},environment)).toThrow('core_configuration_invalid');
+});
 test('core configuration binds loopback restricted login explicit origin and public RSA keys',()=>{
  const scanner={leaseKeyRevision:'lease-1',redactionKeyRevision:'redaction-1'},tls={certificateFile:'/fixture/cert.pem',privateKeyFile:'/fixture/key.pem'},env={...environment,ALLURA_BUMBLEBEE_LEASE_KEY:randomBytes(32).toString('base64url'),ALLURA_BUMBLEBEE_REDACTION_KEY:randomBytes(32).toString('base64url')};const enabled=parseCoreConfig({...config,scanner,tls},env);expect(enabled.scanner?.keyRevision).toBe('lease-1');expect(enabled.scanner?.redactionKeyRevision).toBe('redaction-1');expect(enabled.scanner?.leaseKey.length).toBe(32);expect(enabled.tls).toEqual(tls);expect(parseCoreConfig(config,environment).scanner).toBeUndefined();
  for(const raw of [{...config,scanner},{...config,scanner:{...scanner,allowLoopbackFixture:true},tls},{...config,scanner:{...scanner,leaseKeyRevision:''},tls},{...config,tls:{...tls,privateKeyFile:'relative.pem'}},{...config,tls:{...tls,privateKeyFile:'/fixture/../key.pem'}},{...config,tls:{...tls,trustProxy:true}}]){expect(()=>parseCoreConfig(raw,env)).toThrow('core_configuration_invalid');}

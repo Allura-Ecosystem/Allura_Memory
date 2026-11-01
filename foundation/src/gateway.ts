@@ -11,13 +11,15 @@ import { DeviceError } from './devices.ts';
 import { ProjectionError } from './projection-contract.ts';
 import { BumblebeeConfigurationError } from './bumblebee-configuration.ts';
 import { AppModuleError } from './app-modules.ts';
+import { WorkPlaneError } from './work-plane-contract.ts';
 
 type Limits = { bodyBytes: number; responseBytes: number; targetChars: number; concurrency: number; timeoutMs: number };
 const ceilings: Limits = { bodyBytes: 65536, responseBytes: 131072, targetChars: 2048, concurrency: 16, timeoutMs: 5000 };
-type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal; request:Request }>;
+type Context = Readonly<{ identity: Identity; authority: Authority; scope: Scope; body: Record<string, unknown> | null; signal: AbortSignal; request:Request; params: Readonly<Record<string,string>> }>;
 // Only trusted in-process routes can create this envelope, not parsed user JSON.
 export class GatewayReply {constructor(readonly status:number,readonly body:unknown){if(![200,202,400,405,406,415].includes(status)){throw new Error('invalid response status');}}}
-export type Route = Readonly<{ path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
+export class SerializedJsonReply { constructor(readonly body:string) {} }
+export type Route = Readonly<{ dynamic?:boolean; parseBody?:(text:string)=>Record<string,unknown>; admission?:(context:Context)=>Promise<void>; disclosure?:(context:Context)=>Promise<void>; timeoutStatus?:503; path: string; method: 'GET' | 'POST'; identity: 'human' | 'machine'; action: Action; additionalActions?: (body:Record<string,unknown>|null,context:Context)=>readonly Action[]|Promise<readonly Action[]>; handle: (context: Context) => Promise<unknown> }>;
 type Options = { mode?: 'human'|'machine-only'; human?: HumanConfig; origin: string; store: AuthorityStore; machineLookup: (digest: string) => Promise<MachineCredential | null>; routes: readonly Route[]; limits?: Partial<Limits> };
 class GatewayError extends Error { constructor(readonly status: number, readonly outcome: string) { super(outcome); } }
 const response = (status: number, body: unknown): Response => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
@@ -29,7 +31,7 @@ function cookieToken(request: Request): string | undefined {
   if (values.length > 1) { throw new AuthorityError('unauthenticated'); }
   return values[0]?.slice('CF_Authorization='.length);
 }
-async function readObject(request: Request, limit: number, signal: AbortSignal): Promise<Record<string, unknown>> {
+async function readObject(request: Request, limit: number, signal: AbortSignal, parser?:(text:string)=>Record<string,unknown>): Promise<Record<string, unknown>> {
   if (request.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/json') { throw new GatewayError(400, 'invalid'); }
   const length = request.headers.get('content-length');
   if (length !== null && (!/^\d+$/.test(length) || Number(length) > limit)) { throw new GatewayError(413, 'invalid'); }
@@ -50,7 +52,7 @@ async function readObject(request: Request, limit: number, signal: AbortSignal):
     }
     if (signal.aborted) { throw new GatewayError(504, 'unknown'); }
     let value: unknown;
-    try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks))); } catch { throw new GatewayError(400, 'invalid'); }
+    try { const text=new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks)); value=parser?parser(text):JSON.parse(text); } catch { throw new GatewayError(400, 'invalid'); }
     if (!value || typeof value !== 'object' || Array.isArray(value)) { throw new GatewayError(400, 'invalid'); }
     return value as Record<string, unknown>;
   } finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }
@@ -65,6 +67,13 @@ export function createGateway(options: Options): (request: Request) => Promise<R
   for (const route of options.routes) {
     const key = `${route.method} ${route.path}`;
     if (routes.has(key) || !route.path.startsWith('/') || route.path === '/health/live') { throw new Error('invalid route manifest'); }
+    const parts=route.path.split('/');
+    if(route.dynamic&&route.method==='GET'&&parts.length===3&&parts.every((p,i)=>p.startsWith(':')||p===['','health','live'][i])){throw new Error('invalid route manifest');}
+    if(route.dynamic && (!parts.some(p=>/^:[A-Za-z][A-Za-z0-9_]*$/.test(p)) || parts.some(p=>p.startsWith(':')&&!/^:[A-Za-z][A-Za-z0-9_]*$/.test(p)) || new Set(parts.filter(p=>p.startsWith(':'))).size!==parts.filter(p=>p.startsWith(':')).length)){throw new Error('invalid route manifest');}
+    for(const other of routes.values()){
+      const previous=other.path.split('/');
+      if(other.method===route.method && parts.length===previous.length && parts.every((p,i)=>p===previous[i] || (route.dynamic&&p.startsWith(':')) || (other.dynamic&&previous[i]!.startsWith(':')))){throw new Error('invalid route manifest');}
+    }
     routes.set(key, Object.freeze({ ...route }));
   }
   let active = 0;
@@ -72,7 +81,8 @@ export function createGateway(options: Options): (request: Request) => Promise<R
     if (request.url.length > limits.targetChars) { return response(414, { outcome: 'invalid' }); }
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health/live') { return response(200, { status: 'up' }); }
-    const route = routes.get(`${request.method} ${url.pathname}`);
+    const segments=url.pathname.split('/');
+    const route = routes.get(`${request.method} ${url.pathname}`) ?? [...routes.values()].find(r=>r.dynamic&&r.method===request.method&&r.path.split('/').length===segments.length&&r.path.split('/').every((p,i)=>p.startsWith(':')||p===segments[i]));
     if (!route || (options.mode === 'machine-only' && route.identity === 'human')) { return response(404, { outcome: 'not_found' }); }
     if (active >= limits.concurrency) { return response(429, { outcome: 'unavailable' }); }
     active++;
@@ -97,19 +107,24 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       if (url.searchParams.getAll('group_id').length !== 1 || url.searchParams.getAll('workspace_id').length !== 1) { throw new AuthorityError('invalid'); }
       const scope = Object.freeze({ groupId: url.searchParams.get('group_id')!, workspaceId: url.searchParams.get('workspace_id')! });
       const authority = await resolveAuthority(identity, scope, route.action, options.store);
+      const params:Record<string,string>=Object.create(null);
+      if(route.dynamic){try{route.path.split('/').forEach((p,i)=>{if(p.startsWith(':')){params[p.slice(1)]=decodeURIComponent(segments[i]!);}});}catch{throw new GatewayError(400,'invalid');}}
+      const admitted=Object.freeze({identity,authority,scope,body:null,signal:abort.signal,request,params:Object.freeze(params)});
+      await route.admission?.(admitted);
+      const recheck=async()=>{const current=await resolveAuthority(identity,scope,route.action,options.store);if(route.admission&&current.principalId!==authority.principalId){throw new AuthorityError('forbidden');}};
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
-      const body = route.method === 'POST' ? await readObject(request, limits.bodyBytes, abort.signal) : null;
+      const body = route.method === 'POST' ? await readObject(request, limits.bodyBytes, abort.signal, route.parseBody) : null;
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
-      await resolveAuthority(identity, scope, route.action, options.store);
-      const context=Object.freeze({identity,authority,scope,body,signal:abort.signal,request});
+      await recheck();
+      const context=Object.freeze({...admitted,body});
       const additional=await route.additionalActions?.(body,context)??[];
       for(const action of additional){await resolveAuthority(identity,scope,action,options.store);}
       const result = await route.handle(context);
-      try { await resolveAuthority(identity, scope, route.action, options.store);for(const action of additional){await resolveAuthority(identity,scope,action,options.store);} }
-      catch (error) { if (route.method === 'POST') { throw new GatewayError(503, 'unknown'); } throw error; }
+      try { await recheck();await route.disclosure?.(context);for(const action of additional){await resolveAuthority(identity,scope,action,options.store);} }
+      catch (error) { if (route.method === 'POST' && !route.disclosure) { throw new GatewayError(503, 'unknown'); } throw error; }
       if (abort.signal.aborted) { throw new GatewayError(504, 'unknown'); }
       const status=result instanceof GatewayReply?result.status:200;
-      const encoded = JSON.stringify(result instanceof GatewayReply?result.body:result);
+      const encoded = result instanceof SerializedJsonReply?result.body:JSON.stringify(result instanceof GatewayReply?result.body:result);
       if (encoded === undefined || Buffer.byteLength(encoded) > limits.responseBytes) { throw new GatewayError(503, 'unknown'); }
       return new Response(status===202?null:encoded, { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
     })();
@@ -124,7 +139,8 @@ export function createGateway(options: Options): (request: Request) => Promise<R
       if (error instanceof AuthorityError) { return response(error.code === 'unauthenticated' ? 401 : error.code === 'invalid' ? 400 : 403, { outcome: error.code }); }
       if (error instanceof AccessError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : 503, { outcome: error.code === 'unavailable' ? 'unknown' : error.code }); }
       if (error instanceof RunError || error instanceof SelectedClientError || error instanceof MemoryShareError || error instanceof DecisionError || error instanceof ProposalError || error instanceof CaptureError || error instanceof DeviceError || error instanceof ProjectionError || error instanceof BumblebeeConfigurationError || error instanceof AppModuleError) { return response(error.code === 'conflict' ? 409 : error.code === 'invalid' ? 400 : error.code === 'forbidden' ? 403 : error.code === 'not_found' ? 404 : 503, {outcome:error.code}); }
-      if (error instanceof GatewayError) { return response(error.status, { outcome: error.outcome }); }
+      if (error instanceof WorkPlaneError) { return response(({invalid:400,forbidden:403,not_found:404,conflict:409,failed:500,unknown:503,capacity:503} as const)[error.code],{outcome:error.code}); }
+      if (error instanceof GatewayError) { return response(error.status===504?(route.timeoutStatus??504):error.status, { outcome: error.outcome }); }
       // Arbitrary service exceptions may occur after a commit: never infer rollback.
       return response(503, { outcome: 'unknown' });
     } finally { clearTimeout(timer); }
