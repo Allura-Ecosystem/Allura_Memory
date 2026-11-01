@@ -666,7 +666,27 @@ export async function runDbTests(url: string) {
     "requiredCases": [
       "run revision seven expiry repair preserves genuine revision six histories and refuses old execution"
     ]
-  }
+  },
+  {
+  "requiredFile": "./tests/work-plane.test.ts",
+  "requiredCases": [
+    "work plane ready transition commits one exact event receipt and microsecond token",
+    "work plane faults at every state event receipt and deferred boundary roll back exact history",
+    "work plane current authority and entitlement revocation serialize in both attributable database orders",
+    "work plane backend termination is unknown and leaves state event receipt unchanged",
+    "work plane finite operation cap permits exact replay and PostgreSQL digest binds canonical bytes",
+    "work plane restricted SQL forced RLS immutable history scoped FK and pool reuse cannot bypass authority",
+    "work plane unsupported foreign mapping and DTO storage bounds preserve semantic run and foreign snapshots",
+    "work plane device worker owner linked and selected authenticated clients cannot inherit work entitlements",
+    "work plane fresh process reconciles exact key after committed acknowledgement is withheld",
+    "work plane retained project and item caps reject owner fixture overflow without deleting history",
+    "work plane concurrent fresh exact keys accept one event and replay original bytes",
+    "work plane explicit entitlement actor mapping and nonhuman denials disclose no private state",
+    "work plane same token concurrency exact shared key replay and current read stay distinct",
+    "work plane invalid graph stale microseconds terminal reopen and unsupported evidence are unchanged",
+    "work plane microseconds advance in one transaction through regressed clocks and overflow fails closed"
+  ]
+}
 ];
   const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));
   await runDbBatches({ suites, batches, timeoutMs: 240000, minAssertions: 40,

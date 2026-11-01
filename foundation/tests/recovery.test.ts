@@ -17,9 +17,10 @@ import {createCoreGateway} from '../src/core-api.ts';
 import {createHash,randomBytes} from 'node:crypto';
 import {RecoveryProcessError} from '../src/recovery-diagnostics.ts';
 import {startRun,advanceRun,decideRun,resumeRun,cancelRun} from '../src/runs.ts';
+import {transitionWorkItem,readWorkItem} from '../src/work-plane.ts';
 let source:RecoveryTarget,first:RecoveryTarget,second:RecoveryTarget,root:string,f:Awaited<ReturnType<typeof fixture>>,one:string,two:string,event1:string,event2:string;
 let captureReceipt:string,semanticId:string;
-async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit','run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
+async function canonical(sql:SQL){const result:Record<string,string>={};for(const table of ['events','capture_receipts','semantic_versions','semantic_heads','decision_receipts','semantic_provenance','source_vectors','proposal_audit','operation_observations','read_audit','run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links','work_authority','work_entitlements','work_projects','work_items','work_events','work_receipts']){result[table]=(await sql.unsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text AS data FROM allura.${table} t`))[0].data;}return result;}
 beforeAll(async()=>{root=await mkdtemp(join(tmpdir(),'allura-recovery-evidence-'));source=await createRecoveryTarget();f=await fixture('allura-recovery',await recoveryConnection(source));},60000);
 afterAll(async()=>{await f?.app.close();await f?.owner.close();for(const target of [second,first,source]){if(target){await closeRecoveryTarget(target);}}if(root){await rm(root,{recursive:true,force:true});}},60000);
 test('recovery targets reject forged capabilities and preserve data through actual database restart',async()=>{
@@ -51,17 +52,28 @@ test('one streaming backup exceeds old buffer limits and two same-day manifests 
  await advanceRun(f.app,f.identities.author,f.scope,{runId:cancelStart.runId,expectedRevision:1,operationKey:'recovery-cancel-advance'});
  const cancelCommand={runId:cancelStart.runId,expectedRevision:3,operationKey:'recovery-cancel'},cancelReceipt=await cancelRun(f.app,f.identities.author,f.scope,cancelCommand);
  expect((await f.owner`SELECT outcome,reason FROM allura.run_state WHERE run_id=${cancelStart.runId}::uuid`)[0]).toEqual({outcome:'partial',reason:'cancelled'});
+ await f.owner`INSERT INTO allura.work_authority VALUES(true,'recovery-owner')`;
+ await f.owner`INSERT INTO allura.work_projects VALUES(${f.scope.groupId},${f.scope.workspaceId},'Project:recovery','recovery-owner',true)`;
+ for(const action of ['work:read','work:write']){await f.owner`INSERT INTO allura.work_entitlements VALUES(${f.scope.groupId},${f.scope.workspaceId},${f.ids.author},${action},true)`;}
+ await f.owner`INSERT INTO allura.work_items(group_id,workspace_id,project_id,id,title,status,created_at,updated_at) VALUES(${f.scope.groupId},${f.scope.workspaceId},'Project:recovery','Work:é/Restore','Populated work recovery','ready','2026-01-02T03:04:05.123456Z','2026-01-02T03:04:05.123456Z')`;
+ const workInput={contract:'work-plane-compatibility-v1',command:'transition',group_id:f.scope.groupId,workspace_id:f.scope.workspaceId,actor_id:f.ids.author,operation_key:'recovery-work',expected_updated_at:'2026-01-02T03:04:05.123456Z',to_status:'in_progress'};
+ const workReceipt=await transitionWorkItem(f.app,f.identities.author,f.scope,'Work:é/Restore',workInput);
+ const workCurrent=await readWorkItem(f.app,f.identities.author,f.scope,'Work:é/Restore');
+ expect(JSON.parse(workReceipt).operation_receipt.before_updated_at).toBe('2026-01-02T03:04:05.123456Z');
  const provider=await loadLocalEmbedder();expect((await drainIndexBatch(f.app,f.identities.machine,f.scope,provider)).every(row=>row.state==='succeeded')).toBe(true);const firstState=await canonical(f.owner);
  // Random hexadecimal bytes resist repetition/compression; archive is explicitly uncompressed.
  await f.owner.unsafe('CREATE TABLE public.recovery_padding(payload text NOT NULL)');
  await f.owner.unsafe("INSERT INTO public.recovery_padding SELECT string_agg(md5(random()::text),'') FROM generate_series(1,400000)");
- one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(31);expect(manifest.embedding.dimensions).toBe(384);
+ one=await backupRecovery(source,root);const manifest=JSON.parse(await readFile(one,'utf8'));expect(manifest.archive.bytes).toBeGreaterThan(10*1024*1024);expect(manifest.migrations).toHaveLength(32);expect(manifest.embedding.dimensions).toBe(384);
  event2=await appendEvent(f.app,f.identities.machine!,f.scope,{content:'second recovery evidence'});const secondState=await canonical(f.owner);two=await backupRecovery(source,root);expect(two).not.toBe(one);
  first=await createRecoveryTarget();await restoreRecovery(first,one);const db1=new SQL(await recoveryConnection(first));try{expect(await canonical(db1)).toEqual(firstState);expect(await migrate(db1)).toBe('unchanged');expect((await db1`SELECT id FROM allura.events WHERE kind='capture' ORDER BY id`).map((r:{id:string})=>r.id)).toEqual([event1]);expect((await db1`SELECT length(payload) AS n FROM public.recovery_padding`)[0].n).toBe(12800000);}finally{await db1.close();}
  second=await createRecoveryTarget();await restoreRecovery(second,two);const db2=new SQL(await recoveryConnection(second));try{expect(await canonical(db2)).toEqual(secondState);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE kind='capture'`)[0].n).toBe(2);expect((await db2`SELECT count(*)::integer AS n FROM allura.events WHERE id=${event2}::uuid`)[0].n).toBe(1);
  const password=randomBytes(32).toString('hex');await db2.unsafe(`ALTER ROLE allura_app LOGIN PASSWORD '${password}'`);const url=new URL(await recoveryConnection(second));url.username='allura_app';url.password=password;const app=new SQL(url.href);let server:ReturnType<typeof Bun.serve>|undefined;
  try{const [role]=await app`SELECT current_user,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user`;expect(role).toMatchObject({current_user:'allura_app',rolsuper:false,rolbypassrls:false});expect(await readCaptureReceipt(app,f.identities.machine,f.scope,JSON.parse(captureReceipt).receipt_id)).toBe(captureReceipt);
  const beforeReplay=await canonical(db2);
+ expect(await transitionWorkItem(app,f.identities.author,f.scope,'Work:é/Restore',workInput)).toBe(workReceipt);
+ expect(await readWorkItem(app,f.identities.author,f.scope,'Work:é/Restore')).toBe(workCurrent);
+ expect(await canonical(db2)).toEqual(beforeReplay);
  expect(await cancelRun(app,f.identities.author,f.scope,cancelCommand)).toBe(cancelReceipt);
  expect(await canonical(db2)).toEqual(beforeReplay);
  expect(await resumeRun(app,f.identities.author,f.scope,resumeCommand)).toBe(resumeReceipt);

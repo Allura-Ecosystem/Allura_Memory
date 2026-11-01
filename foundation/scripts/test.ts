@@ -239,7 +239,15 @@ const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssert
  'required runner counts only passed native cases and rejects duplicate identities',
  'required runner rejects non XML whitespace instead of normalizing malformed reports',
  'required runner refuses caller selection overrides before executing fixtures',
-]}];
+]},{
+  requiredFile: './tests/work-plane-contract.test.ts',
+  "minAssertions": 72,
+  "requiredCases": [
+    "work plane contract preserves the exact retained graph and six digit Gregorian tokens",
+    "work plane contract rejects unsupported fields primitives accessors and raw duplicate key JSON",
+    "work plane contract enforces exact UTF8 id reason and operation key boundaries without normalization"
+  ]
+}];
 if (process.argv.length !== 2) {
   throw new Error('The required test lane does not accept selection overrides');
 }
