@@ -19,7 +19,7 @@ async function workspace() {
 }
 function input() {
   const text = 'Natural retained journal boundary evidence';
-  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Bounded immutable history', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  return { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 7, goal: 'Bounded immutable history', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
 }
 async function started(scope: Scope) {
   const value=input(),receipt=await startRun(f.app,f.identities.author,scope,value);

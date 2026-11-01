@@ -3,8 +3,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readBunReport } from '../src/test-runner.ts';
 // Bun 1.3.14 exits zero for empty test files: verify execution, not just exit.
-const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,requiredCases:[
- 'run revision six admission preserves historical parser revisions',
+const suites = [{requiredFile:'./tests/core-release-integrity.test.ts',minAssertions:264,requiredCases:[
+ 'core release rejects duplicate decoded envelope and input keys',
+ 'core release rejects nonexact envelopes and invalid fixed two level JSON',
+ 'core pack verifies actual rebuilt archive and rejects overlimit source before artifact receipt',
+ 'core release enforces literal 128 160 and 161 input boundaries and hashes the last entry',
+ 'core release enforces exact manifest bytes and accepts ordinary JSON whitespace and escapes',
+ 'core release enforces two MiB per input and 32 dashboard asset boundaries',
+ 'core release rejects every missing required input missing file and invalid or wrong digest',
+ 'core release rejects absolute traversal backslash nested forbidden and nonfile input paths',
+ 'core release rejects unlisted missing and nonfile dashboard assets',
+ 'core release accepts valid 129 input filesystem package',
+]},{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,requiredCases:[
+ 'run revision seven admission preserves historical parser revisions',
  'run contract rejects authority policy and executable input overrides',
  'run start input preserves exact bounded UTF8 bytes and immutable copies',
  'run start definition pins owned source and fixed data only policy',
@@ -183,6 +194,7 @@ const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,re
  'dashboard search matches federated fields and honestly labels partial failed truncated responses',
 ]},{requiredFile:'./tests/test-runner.test.ts',minAssertions:1142,requiredCases:[
  'DB orchestration executes every canonical case once in three exact native batches without preflights',
+ 'DB orchestration requires every run age and genuine six upgrade case with exact native ownership',
  'DB orchestration rejects every omitted upgrade case and missing file in canonical enforcement',
  'DB orchestration rejects upgrade native skips failures zero assertions exits and signals canonically',
  'DB orchestration rejects malformed misowned upgrade native reports and forged console coverage canonically',

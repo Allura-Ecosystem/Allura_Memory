@@ -19,7 +19,7 @@ afterAll(async () => { await f?.close(); });
 const tables = ['run_definitions','run_records','run_state','run_steps','run_journal','run_operation_receipts','run_effect_receipts','run_approval_requests','run_approval_decisions','run_handoff_links','events','semantic_versions','proposal_state','proposal_versions','proposal_evidence','proposal_audit'];
 async function snapshot() { return Promise.all(tables.map(async table => [...await f.owner.unsafe(`SELECT to_jsonb(t)::text AS row FROM allura.${table} t ORDER BY 1`)])); }
 async function setup(mode = 'ready') {
-  const text = 'Private inspection artifact', input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Private scoped goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const text = 'Private inspection artifact', input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 7, goal: 'Private scoped goal', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   if (mode === 'failed') { input.artifact.expectedSha256 = 'a'.repeat(64); }
   const start = await startRun(f.app, f.identities.author, f.scope, input), runId = JSON.parse(start).runId as string;
   if (mode !== 'ready') { await advanceRun(f.app, f.identities.author, f.scope, { runId, expectedRevision: 1, operationKey: randomUUID() }); }
@@ -42,7 +42,7 @@ test('run inspection exposes exact pinned complete evidence and page independent
   for (const mode of ['ready', 'paused', 'completed', 'failed']) {
     const h = await setup(mode), response = await get(h.runId, '&limit=1'); expect(response.status).toBe(200);
     const view = await response.json() as RunInspection;
-    const [def] = await f.owner`SELECT definition,definition_digest,policy_digest,handler_digest FROM allura.run_definitions WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND revision=6`;
+    const [def] = await f.owner`SELECT definition,definition_digest,policy_digest,handler_digest FROM allura.run_definitions WHERE group_id=${f.scope.groupId} AND workspace_id=${f.scope.workspaceId}::uuid AND revision=7`;
     expect(view.definition).toEqual(def.definition); expect(view.policy).toEqual(def.definition.policy);
     expect(view.record.definition.digest).toBe(def.definition_digest); expect(view.record.policyDigest).toBe(def.policy_digest); expect(view.handlerBundleDigest).toBe(def.handler_digest);
     expect(view.steps).toHaveLength(3); expect(view.operations[0]!.id).toBe(JSON.parse(h.start).id);

@@ -2,6 +2,14 @@
 
 This is the current rebuilt core, not the historical deployed service or UI. Runtime is exactly Bun 1.3.14 / Node 24.19.0 on supported Linux with pinned native RuVector/ONNX dependencies, PostgreSQL 16.15 and either the pinned local 384-dimensional MiniLM model or explicitly selected external OpenAI embeddings. The source package name remains the private foundation workspace; the distribution contract is `allura-core-release-v1`. It is not an npm publication.
 
+## Package integrity limits and rebuild compatibility
+
+The producer verifies its completed staging directory with the same `verifyCoreRelease` used by consumers, before writing the tarball or pack receipt. The manifest has exactly the seven documented envelope fields and one `inputs` object; duplicate decoded keys at either level (including escaped equivalents) are rejected, even when values agree. Ordinary JSON spaces, tabs, CR/LF and pretty-printed producer output remain accepted. All failures from the verifier expose only `core_release_integrity`.
+
+Limits are **160 inputs**, **65,536 manifest bytes**, **2 MiB per input**, and **32 dashboard assets**. Required entries, exact allowed relative paths, regular-file/final-symlink checks and SHA256 checks still apply to every entry, including the last. The deliberate input-bound expansion from128 to160 increases the theoretical per-file-bounded hashing ceiling from256 MiB to320 MiB; it is not evidence that future Epics13–14 fit. The manifest is still read wholly before its byte bound is checked; intermediate-directory symlinks and concurrent filesystem changes are not comprehensively defended by these checks. Use a trusted, owned, immutable extraction directory, not a hostile mutable filesystem. These checks are not signatures or a general resource-isolation guarantee.
+
+Older embedded verifiers reject packages above128 inputs. Rebuild and replace the **complete package** to obtain the new verifier and matching manifest/receipt. Do not hot-patch an installed file, delete manifest inputs or relax verification. The distribution contract remains `allura-core-release-v1`; this packaging change does not change the explicitly source-pinned durable-run definition revision7.
+
 ## Install and initialize a new, empty isolated instance
 
 Verify the archive SHA256 against the pack receipt from the trusted source checkout, then extract into a new owned directory. The receipt records actual source HEAD, dirty status and all shipped file digests; dirty builds are explicitly not exact-revision releases. Runtime verifies shipped input hashes before connecting to the database. Checksums are integrity evidence, NOT signatures, and do not authenticate a modified manifest, dependencies or model cache.

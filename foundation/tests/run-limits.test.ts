@@ -19,7 +19,7 @@ async function workspace() {
 }
 async function started(scope: Scope) {
   const text = 'Bounded local limits evidence';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Limits recovery', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 7, goal: 'Limits recovery', reviewerPrincipalId: f.ids.reviewer, artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const receipt = await startRun(f.app,f.identities.author,scope,input);
   return { input, receipt, command: { runId: JSON.parse(receipt).runId as string, expectedRevision: 1, operationKey: randomUUID() } };
 }

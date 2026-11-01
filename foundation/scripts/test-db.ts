@@ -650,6 +650,21 @@ export async function runDbTests(url: string) {
       "run journal admission exhaustion preserves reserved handoff completion through row 128",
       "run journal exhaustion preserves reserved cancellation after an abandoned boundary claim"
     ]
+  },
+  {
+    "requiredFile": "./tests/run-age.test.ts",
+    "requiredCases": [
+      "run age expiry during deferred preparation constraints cannot commit expired effects",
+      "run age expiry during nondeferred preparation writes cannot commit expired effects",
+      "run age expired fresh preparation claim terminates without effects",
+      "run age expired preparation finish rolls back while original lease remains valid"
+    ]
+  },
+  {
+    "requiredFile": "./tests/run-age-upgrade.test.ts",
+    "requiredCases": [
+      "run revision seven expiry repair preserves genuine revision six histories and refuses old execution"
+    ]
   }
 ];
   const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));

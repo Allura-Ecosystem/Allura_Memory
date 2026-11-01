@@ -20,7 +20,7 @@ async function prepared(scope?: Scope, owner: 'author' | 'viewer' = 'author', re
   await f.owner`INSERT INTO allura.workspaces(group_id,id,display_name,created_by) VALUES(${scope.groupId},${scope.workspaceId}::uuid,'Private decision fixture',${f.ids[owner]}::uuid) ON CONFLICT DO NOTHING`;
   for (const id of [f.ids[owner], f.ids[reviewer]]) { await f.owner`INSERT INTO allura.workspace_grants(group_id,workspace_id,principal_id,role,issuer) VALUES(${scope.groupId},${scope.workspaceId}::uuid,${id}::uuid,'workspace_admin',${f.ids[owner]}::uuid) ON CONFLICT DO NOTHING`; }
   const text = 'Private exact artifact\r\nCafe\u0301 🧠';
-  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 6, goal: 'Private decision goal', reviewerPrincipalId: f.ids[reviewer], artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
+  const input = { operationKey: randomUUID(), definitionId: 'local-evidence-handoff', definitionRevision: 7, goal: 'Private decision goal', reviewerPrincipalId: f.ids[reviewer], artifact: { text, expectedSha256: createHash('sha256').update(text).digest('hex'), sourceRevision: null } };
   const start = await startRun(f.app, f.identities[owner], scope, input), runId = JSON.parse(start).runId as string;
   const advanceCommand = { runId, expectedRevision: 1, operationKey: randomUUID() };
   const advance = await advanceRun(f.app, f.identities[owner], scope, advanceCommand);
