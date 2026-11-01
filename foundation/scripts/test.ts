@@ -96,6 +96,7 @@ const suites = [{requiredFile:'./tests/run-contract.test.ts',minAssertions:72,re
 ] }, { requiredFile: './tests/gateway.test.ts', minAssertions: 29, requiredCases: [
   'gateway authenticates before body and never trusts forged headers',
   'gateway bounds streamed body rejects malformed JSON and cross-site',
+  'gateway strictly decodes raw UTF8 and preserves split multibyte replacement characters',
   'gateway rechecks revocation before disclosure and redacts service errors',
   'post-commit revocation returns unknown rather than a false no-write denial',
   'gateway retains admission while timed-out work is unresolved',

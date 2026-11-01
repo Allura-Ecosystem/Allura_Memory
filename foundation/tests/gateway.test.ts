@@ -63,6 +63,27 @@ test('gateway bounds streamed body rejects malformed JSON and cross-site', async
   expect(calls).toBe(1);
 });
 
+test('gateway strictly decodes raw UTF8 and preserves split multibyte replacement characters', async () => {
+  let calls = 0;
+  const gateway = createGateway({ human: config, origin, store, machineLookup: async () => null, routes: [{ path: '/utf8', method: 'POST', identity: 'human', action: 'memory:capture', handle: async ({ body }) => { calls++; return body; } }] });
+  for (const invalid of [[0x80],[0xc0,0xaf],[0xe2,0x82],[0xed,0xa0,0x80],[0xf4,0x90,0x80,0x80]]) {
+    const body = Buffer.concat([Buffer.from('{"text":"'),Buffer.from(invalid),Buffer.from('"}')]);
+    const request = new Request(`${origin}/utf8${query}`, { method: 'POST', headers, body });
+    const response = await gateway(request);
+    expect(response.status).toBe(400); expect(await response.json()).toEqual({ outcome: 'invalid' }); expect(calls).toBe(0);
+    for (const [changed,status] of [[{ 'Cf-Access-Jwt-Assertion': 'forged' },401],[{ Origin: 'https://foreign.invalid' },403]] as [Record<string,string>,number][]) {
+      const denied = new Request(`${origin}/utf8${query}`, { method: 'POST', headers: { ...headers, ...changed }, body });
+      expect((await gateway(denied)).status).toBe(status); expect(denied.bodyUsed).toBe(false);
+    }
+  }
+  // Preserve the old parser's BOM rejection rather than silently stripping it.
+  expect((await gateway(new Request(`${origin}/utf8${query}`, { method: 'POST', headers, body: Buffer.from('\ufeff{}') }))).status).toBe(400);
+  const value = { text: ' Exact \ufffd Cafe\u0301 🧠\r\n日本語 ' }, bytes = Buffer.from(JSON.stringify(value)); let index = 0, pulls = 0;
+  const body = new ReadableStream<Uint8Array>({ pull(controller) { pulls++; if (index < bytes.length) { controller.enqueue(bytes.subarray(index,index + 1)); index++; } else { controller.close(); } } }, { highWaterMark: 0 });
+  const response = await gateway(new Request(`${origin}/utf8${query}`, { method: 'POST', headers, body }));
+  expect(response.status).toBe(200); expect(await response.json()).toEqual(value); expect(pulls).toBe(bytes.length + 1); expect(calls).toBe(1);
+});
+
 test('gateway rechecks revocation before disclosure and redacts service errors', async () => {
   let current = row;
   const live = { resolve: async () => current };

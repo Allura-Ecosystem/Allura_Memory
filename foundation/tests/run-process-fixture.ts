@@ -20,7 +20,11 @@ if (input.removeExecutor === true) {
 const identity = auth.authenticateHuman({ assertion: input.assertion }, { issuer: input.issuer, audience: 'fixture', keys: new Map([['key', createPublicKey(input.publicKey)]]) });
 const sql = new SQL(input.url, { max: 1 });
 try {
-  if (input.mode === 'advance') {
+  if (input.mode === 'decide') {
+    const receipt = await runs.decideRun(sql, identity, input.scope, input.command);
+    console.log(JSON.stringify({ receipt }));
+    if (input.hold) { await Bun.sleep(30000); }
+  } else if (input.mode === 'advance') {
     const receipt = await runs.advanceRun(sql, identity, input.scope, input.command);
     console.log(JSON.stringify({ receipt }));
     if (input.hold) { await Bun.sleep(30000); }

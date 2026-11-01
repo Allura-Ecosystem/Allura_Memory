@@ -50,7 +50,7 @@ async function readObject(request: Request, limit: number, signal: AbortSignal):
     }
     if (signal.aborted) { throw new GatewayError(504, 'unknown'); }
     let value: unknown;
-    try { value = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new GatewayError(400, 'invalid'); }
+    try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks))); } catch { throw new GatewayError(400, 'invalid'); }
     if (!value || typeof value !== 'object' || Array.isArray(value)) { throw new GatewayError(400, 'invalid'); }
     return value as Record<string, unknown>;
   } finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }

@@ -2,7 +2,7 @@ import { type SQL } from 'bun';
 import { isAuthenticated, type Identity } from './authentication.ts';
 import { AuthorityError, type Scope } from './authority.ts';
 import { scopedTransaction } from './persistence.ts';
-import { parseStartRun, parseRunCommand, runDefinition, RunError } from './run-contract.ts';
+import { parseStartRun, parseRunCommand, parseRunDecision, runDefinition, RunError } from './run-contract.ts';
 import { randomUUID } from 'node:crypto';
 import { finishPreparation, type PreparationClaim } from './run-execution.ts';
 
@@ -22,6 +22,27 @@ export async function advanceRun(sql: SQL, identity: Identity, scope: Scope, val
     });
     if (result.claim) { await finishPreparation(sql, identity, scope, result.claim, signal); }
     return result.receipt;
+  } catch (error) {
+    if (error instanceof AuthorityError || error instanceof RunError) { throw error; }
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'invalid' || message === 'forbidden' || message === 'not_found' || message === 'conflict' || message === 'unavailable') { throw new RunError(message); }
+    throw new RunError('unknown');
+  }
+}
+
+export async function decideRun(sql: SQL, identity: Identity, scope: Scope, value: unknown, signal?: AbortSignal): Promise<string> {
+  if (!isAuthenticated(identity)) { throw new AuthorityError('unauthenticated'); }
+  if (identity.kind !== 'human') { throw new RunError('forbidden'); }
+  try {
+    signal?.throwIfAborted();
+    const input = parseRunDecision(value);
+    return await scopedTransaction(sql, identity, scope, 'workspace:grants:manage', async tx => {
+      signal?.throwIfAborted();
+      const definition = await runDefinition().catch(() => null);
+      const [row] = await tx`SELECT allura.decide_run(${scope.groupId},${scope.workspaceId}::uuid,${input}::jsonb,${definition}::jsonb) AS receipt`;
+      signal?.throwIfAborted();
+      return row.receipt as string;
+    });
   } catch (error) {
     if (error instanceof AuthorityError || error instanceof RunError) { throw error; }
     const message = error instanceof Error ? error.message : '';

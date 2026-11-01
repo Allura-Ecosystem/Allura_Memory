@@ -38,7 +38,43 @@ try {
   console.log(JSON.stringify({ image, server, target: 'isolated-loopback-disposable', container: name }));
   // Focused behavioral gate uses this same owned DB; no alternate target or
   // selection override. Full canonical discovery still runs on every GREEN.
+  const decisionCases = ['run decision approve is atomic ready handoff without execution or semantic promotion',
+    'run decision exact selectors strict SQL payloads and namespace conflicts write nothing',
+    'run decision concurrent start collision reaches post-admission lookup and returns conflict',
+    'run decision final expiry guard rolls back after attributable valid deferred entry',
+    'run decision signed HTTP rejects malformed raw UTF8 without writes and preserves exact Unicode',
+    'run decision current original participants bindings and foreign scopes cannot be substituted',
+    'run decision private SQL immutable rows scoped links and pooled contexts enforce isolation',
+    'run decision concurrent duplicates and competing choices produce one authoritative transition',
+    'run decision insert update deferred faults and backend termination leave no partial approval',
+    'run decision owner and reviewer revocation serialize both attributable database orders',
+    'run decision source drift denies new approval while exact committed replay stays historical',
+    'run decision database expiry rejects pending and in-flight approval without renewing historical replay',
+    'run decision HTTP authenticates before body and lost committed response reconciles after restart'];
+  const decisions = Bun.spawnSync([process.execPath, 'test', './tests/run-decision.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
+  const decisionOutput = decisions.stderr.toString(); process.stdout.write(decisions.stdout); process.stderr.write(decisionOutput);
+  const decisionPass = Number(decisionOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0), decisionAssertions = Number(decisionOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
+  const decisionMissing = decisionCases.filter(name => !decisionOutput.includes(`(pass) ${name} [`));
+  console.log(JSON.stringify({ lane: 'run-decisions', pass: decisionPass, assertions: decisionAssertions, missing: decisionMissing, exit: decisions.exitCode }));
+  if (decisions.exitCode !== 0 || decisionPass < decisionCases.length || decisionAssertions < 1 || decisionMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(decisionOutput)) { throw new Error('Required run decision lane failed'); }
+  // Genuine upgrade expiry waits for the original ten-second lease plus backoff.
+  // Keep it in a separately bounded required preflight; do not raise the existing
+  // runs timeout or omit any case from the full canonical database inventory.
+  const upgradeCases = [
+    'run revision three upgrade preserves genuine paused revision two evidence and refuses old execution',
+    'run revision two owned export cleanup survives extraction verification and callback failures',
+    'run expired revision two claim replays exact receipt without changing complete history',
+    'run still-valid revision two claim original worker is blocked by revision guard after upgrade',
+    'run real revision upgrade preserves legacy admission and admits current revision in the same workspace',
+  ];
+  const upgrades = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 30000 });
+  const upgradeOutput = upgrades.stderr.toString(); process.stdout.write(upgrades.stdout); process.stderr.write(upgradeOutput);
+  const upgradePass = Number(upgradeOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0), upgradeAssertions = Number(upgradeOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
+  const upgradeMissing = upgradeCases.filter(name => !upgradeOutput.includes(`(pass) ${name} [`));
+  console.log(JSON.stringify({ lane: 'run-upgrades', pass: upgradePass, assertions: upgradeAssertions, missing: upgradeMissing, exit: upgrades.exitCode }));
+  if (upgrades.exitCode !== 0 || upgradePass < upgradeCases.length || upgradeAssertions < 1 || upgradeMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(upgradeOutput)) { throw new Error('Required run upgrade lane failed'); }
   const runCases = [
+    'run exact approval replay never authorizes changed expired or rejected evidence',
     'run prepare SQL state and measurement constraints reject nullable forged evidence',
     'run prepare retry due time and attempt exhaustion cannot reset through new keys',
     'run prepare aborted work retains admission until real rollback and rejects excess leases',
@@ -52,7 +88,6 @@ try {
     'run prepare strict command and stale fence reject caller asserted completion',
     'run prepare insert update and deferred faults preserve atomic effect boundaries',
     'run lost committed preparation response reconciles without another effect',
-    'run real revision upgrade preserves legacy admission and admits revision two in the same workspace',
     'run HTTP authenticates before body and preserves mixed identity CSRF denial',
     'run HTTP strict selectors and input reject overrides without disclosure',
     'run lost committed HTTP start response reconciles the original admission',
@@ -67,7 +102,7 @@ try {
     'run start replay requires original owner and reviewer bindings',
     'run same key concurrency yields one receipt and changed payload conflicts',
   ];
-  const runs = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts', './tests/runs-http.test.ts', './tests/runs.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
+  const runs = Bun.spawnSync([process.execPath, 'test', './tests/runs-http.test.ts', './tests/runs.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
   const runsOutput = runs.stderr.toString();
   process.stdout.write(runs.stdout); process.stderr.write(runsOutput);
   const runsPass = Number(runsOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -103,7 +138,7 @@ try {
   const focusedAssertions = Number(focusedOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   console.log(JSON.stringify({ lane: 'client-authority', pass: focusedPass, assertions: focusedAssertions, exit: focused.exitCode }));
   if (focused.exitCode !== 0 || focusedPass < 1 || focusedAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(focusedOutput)) { throw new Error('Required client authority lane failed'); }
-  const result = Bun.spawnSync([process.execPath, 'test', './tests/run-upgrade.test.ts', './tests/runs-http.test.ts', './tests/runs.test.ts', './tests/selected-consent-browser.test.ts', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
+  const result = Bun.spawnSync([process.execPath, 'test', './tests/run-decision.test.ts', './tests/run-upgrade.test.ts', './tests/runs-http.test.ts', './tests/runs.test.ts', './tests/selected-consent-browser.test.ts', './tests/selected-client.test.ts', './tests/memory-shares.test.ts', './tests/oauth-consent-browser.test.ts', './tests/oauth-contract.test.ts', './tests/oauth-http.test.ts', './tests/client-authority.test.ts', './tests/memory-experiment-browser.test.ts', './tests/memory-experiment-workflow.test.ts', './tests/app-modules.test.ts', './tests/bumblebee-persistence.test.ts', './tests/bumblebee-leases.test.ts', './tests/bumblebee-configuration.test.ts', './tests/projection-delivery.test.ts', './tests/projection-browser.test.ts', './tests/projection.test.ts', './tests/persistence.test.ts', './tests/access.test.ts', './tests/capture.test.ts', './tests/proposals.test.ts', './tests/decisions.test.ts', './tests/decision-atomic.test.ts', './tests/corrections.test.ts', './tests/lifecycle.test.ts', './tests/restoration.test.ts', './tests/indexing.test.ts', './tests/retrieval.test.ts', './tests/federation.test.ts', './tests/retrieval-evaluation.test.ts', './tests/operations.test.ts', './tests/consumer-http.test.ts', './tests/consumer-pack.test.ts', './tests/recovery.test.ts', './tests/core-release.test.ts', './tests/device-authority.test.ts', './tests/devices.test.ts', './tests/device-http.test.ts', './tests/device-client.test.ts', './tests/dashboard-http.test.ts', './tests/dashboard-browser.test.ts', './tests/dashboard-admin-browser.test.ts', './tests/dashboard-graph-browser.test.ts', './tests/dashboard-surface-browser.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 360000 });
   const output = result.stderr.toString();
   process.stdout.write(result.stdout); process.stderr.write(output);
   const pass = Number(output.match(/\b(\d+) pass\b/)?.[1] ?? 0);
@@ -111,6 +146,8 @@ try {
   const skip = Number(output.match(/\b(\d+) skip\b/)?.[1] ?? 0);
   const assertions = Number(output.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
   const required = [
+    ...decisionCases,
+    ...upgradeCases,
     ...runCases,
     'selected browser SDK discovery approves grantless exact consent and reads only the approved version',
     'selected browser denies absent invalid expired mixed bearer no share and foreign scope before display',
