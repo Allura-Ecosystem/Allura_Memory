@@ -36,12 +36,24 @@ function runOrchestration(root: string) {
   const rows = child.stdout.toString().split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
   return { exit: child.exitCode, output, rows, aggregates: rows.filter(row => row.lane === 'restricted-postgres') };
 }
+const retentionFile = './tests/run-retention-journal.test.ts';
+const retentionSuite = canonicalSuites.find(suite => suite.requiredFile === retentionFile)!;
 const upgradeFile = './tests/run-upgrade.test.ts';
 const upgradeSuite = canonicalSuites.find(suite => suite.requiredFile === upgradeFile)!;
 const retainedPreflights = ['run-inspection', 'run-cancel', 'run-cancel-upgrade', 'run-resumes', 'run-resume-upgrades', 'run-decisions', 'runs', 'client-authority'];
-test('DB orchestration consolidates OAuth and upgrades only after exact native coverage with eight unchanged preflights', async () => {
-  expect(canonicalSuites).toHaveLength(54);
-  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(366);
+test('DB orchestration executes every canonical case once in three exact native batches without preflights', async () => {
+  expect(canonicalSuites).toHaveLength(55);
+  expect(canonicalSuites.flatMap(suite => suite.requiredCases)).toHaveLength(369);
+  const retention = canonicalSuites.filter(suite => suite.requiredFile === retentionFile);
+  expect(retention).toEqual([{ requiredFile: retentionFile, requiredCases: [
+    'run retained total saturation admits one final concurrent start and preserves scoped history',
+    'run journal admission exhaustion preserves reserved handoff completion through row 128',
+    'run journal exhaustion preserves reserved cancellation after an abandoned boundary claim',
+  ] }]);
+  expect(canonicalSuites.at(-1)).toEqual(retention[0]!);
+  expect(canonicalSuites.findIndex(suite => suite.requiredFile === './tests/runs.test.ts')).toBe(10);
+  const retentionSource = await Bun.file(new URL(`../${retentionFile}`, import.meta.url)).text();
+  expect([...retentionSource.matchAll(/test\('([^']+)'/g)].map(match => match[1]!)).toEqual(retention[0]!.requiredCases);
   const limits = canonicalSuites.filter(suite => suite.requiredFile === './tests/run-limits.test.ts');
   expect(limits).toEqual([{ requiredFile: './tests/run-limits.test.ts', requiredCases: [
     'run handoff retry exhaustion preserves partial truth and cannot reset through new keys',
@@ -59,29 +71,32 @@ test('DB orchestration consolidates OAuth and upgrades only after exact native c
   await withDbOrchestration(async root => {
     const result = runOrchestration(root);
     expect(result.exit, result.output).toBe(0);
-    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 366, fail: 0, skip: 0, assertions: 366, missing: [], exit: 0 }]);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 369, fail: 0, skip: 0, assertions: 369, missing: [], exit: 0 }]);
     const executions = (await readFile(join(root, 'executions.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line) as string);
     for (const file of [...oauthFiles, upgradeFile]) { expect(executions.filter(path => path === file), file).toHaveLength(1); }
     expect(upgradeSuite.requiredCases).toHaveLength(5);
     const upgradeSource = await Bun.file(new URL(`../${upgradeFile}`, import.meta.url)).text();
     expect([...upgradeSource.matchAll(/test\('([^']+)'/g)].map(match => match[1]!).sort()).toEqual([...upgradeSuite.requiredCases].sort());
-    expect(result.rows.filter(row => retainedPreflights.includes(row.lane)).map(row => row.lane)).toEqual(retainedPreflights);
+    expect(result.rows.filter(row => retainedPreflights.includes(row.lane))).toEqual([]);
     expect(result.rows.filter(row => ['oauth', 'run-upgrades'].includes(row.lane))).toEqual([]);
     for (const suite of canonicalSuites) {
-      const repeated = (canonicalSuites.slice(1, 11).includes(suite) && suite.requiredFile !== upgradeFile) || suite.requiredFile === './tests/client-authority.test.ts';
-      expect(executions.filter(file => file === suite.requiredFile)).toHaveLength(repeated ? 2 : 1);
+      expect(executions.filter(file => file === suite.requiredFile)).toHaveLength(1);
     }
+    const batches = result.rows.filter(row => row.lane === 'restricted-postgres-batch');
+    expect(batches.map(row => row.files)).toEqual([canonicalSuites.slice(0, 11), canonicalSuites.slice(11, 42), canonicalSuites.slice(42)].map(batch => batch.map(suite => suite.requiredFile)));
+    expect(batches.map(row => [row.batch, row.files.length, row.pass])).toEqual([[1, 11, 86], [2, 31, 235], [3, 13, 48]]);
+    expect(batches.every(row => row.timeoutMs === 240000)).toBe(true);
+    expect(readdirSync(join(root, 'retained', readdirSync(join(root, 'retained'))[0]!)).sort()).toEqual(['batch-1.xml', 'batch-2.xml', 'batch-3.xml']);
     expect(result.rows.at(-1)).toEqual(result.aggregates[0]);
   });
 }, 30000);
 
-// All eight unrelated preflights must finish before any upgrade rejection is
-// credited. Batch one failures can occur before a native batch receipt exists.
+// Upgrade failures belong to batch one; no preflight may mask rejection.
 function rejectedUpgrade(result: ReturnType<typeof runOrchestration>) {
   expect(result.exit, result.output).not.toBe(0);
   expect(result.aggregates, result.output).toEqual([]);
-  expect(result.rows.filter(row => retainedPreflights.includes(row.lane)).map(row => row.lane), result.output).toEqual(retainedPreflights);
-  expect(result.rows.filter(row => row.lane === 'database-timing' && row.phase === 'preflights'), result.output).toHaveLength(1);
+  expect(result.rows.filter(row => retainedPreflights.includes(row.lane)), result.output).toEqual([]);
+  expect(result.rows.filter(row => row.lane === 'database-timing' && row.phase === 'preflights'), result.output).toHaveLength(0);
   expect(result.rows.filter(row => row.lane === 'run-upgrades'), result.output).toEqual([]);
   expect(result.output).toMatch(/Required canonical database batches failed|Invalid native Bun test report|ENOENT/);
   expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 2)).toEqual([]);
@@ -149,6 +164,53 @@ function rejectedOrchestration(result: ReturnType<typeof runOrchestration>) {
   // A preflight/setup error is not evidence for OAuth canonical enforcement.
   expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 1)).toHaveLength(1);
 }
+test('DB orchestration requires exact retention journal native ownership once at canonical manifest end', async () => {
+  const reject = (result: ReturnType<typeof runOrchestration>) => {
+    rejectedOrchestration(result);
+    expect(result.rows.filter(row => retainedPreflights.includes(row.lane))).toEqual([]);
+    expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 2)).toHaveLength(1);
+    for (const row of result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch === 3)) {
+      expect(row.exit !== 0 || row.fail > 0 || row.skip > 0 || row.missing.length > 0).toBe(true);
+    }
+  };
+  const source = fixtureSource({ ...retentionSuite, minAssertions: 3 }, 3);
+  for (const fault of [
+    null,
+    ...retentionSuite.requiredCases.map(omitted => fixtureSource({ ...retentionSuite, requiredCases: retentionSuite.requiredCases.filter(name => name !== omitted), minAssertions: 3 }, 3)),
+    source.replace('test(', 'test.skip('),
+    source.replace('toBe(true)', 'toBe(false)'),
+    fixtureSource({ ...retentionSuite, minAssertions: 0 }, 0),
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.exitCode = 7; });',
+    source + '\nimport { afterAll } from "bun:test"; afterAll(() => { process.kill(process.pid, "SIGKILL"); });',
+  ]) {
+    await withDbOrchestration(async root => {
+      if (fault === null) { await rm(join(root, retentionFile)); }
+      else { await writeFile(join(root, retentionFile), fault); }
+      reject(runOrchestration(root));
+    });
+  }
+  for (const fault of [
+    'await Bun.write(reportPath, xml.slice(0, -20));',
+    'await Bun.write(reportPath, xml.replace(/(<testcase[^>]*file=")tests\\/run-retention-journal.test.ts/, "$1tests/run-limits.test.ts"));',
+  ]) {
+    await withDbOrchestration(async root => {
+      const path = join(root, 'src/db-test-runner.ts'), original = await readFile(path, 'utf8');
+      const marker = 'const report = await readBunReports(reportPath, batch);';
+      expect(original.split(marker)).toHaveLength(2);
+      await writeFile(path, original.replace(marker, `if (index === 2) { const xml = await Bun.file(reportPath).text(); ${fault} if (await Bun.file(reportPath).text() === xml) { throw new Error('Fault did not change native report'); } }\n${marker}`));
+      const result = runOrchestration(root); reject(result);
+      expect(result.output).not.toContain('Fault did not change native report');
+      expect(result.output).toContain('Invalid native Bun test report');
+    });
+  }
+  await withDbOrchestration(async root => {
+    await writeFile(join(root, retentionFile), fixtureSource({ ...retentionSuite, requiredCases: ['renamed retention'], minAssertions: 3 }, 3)
+      + `\nconsole.log(${JSON.stringify(`(pass) ${retentionSuite.requiredCases[0]} [0.1ms]`)}); console.log(JSON.stringify({lane:'restricted-postgres',pass:369,fail:0,skip:0,assertions:999,missing:[],exit:0}));`);
+    const result = runOrchestration(root); reject(result);
+    expect(result.output).toContain('[db-child-3] {"lane":"restricted-postgres"');
+  });
+}, 30000);
+
 test('DB orchestration rejects each missing OAuth file and case including the deferred fault negative witness', async () => {
   for (const file of oauthFiles) {
     await withDbOrchestration(async root => {
@@ -211,7 +273,7 @@ test('DB orchestration rejects malformed and misowned OAuth native reports and f
 }, 30000);
 
 type DbSuite = { requiredFile: string; requiredCases: string[] };
-const dbSuites: DbSuite[] = ['a', 'b', 'c'].map(name => ({ requiredFile: `./tests/${name}.test.ts`, requiredCases: [`case ${name}`] }));
+const dbSuites: DbSuite[] = ['a', 'b', 'c', 'd'].map(name => ({ requiredFile: `./tests/${name}.test.ts`, requiredCases: [`case ${name}`] }));
 async function withDbFixture(check: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'allura-db-runner-fixture-'));
   try {
@@ -223,7 +285,7 @@ async function withDbFixture(check: (root: string) => Promise<void>) {
     }
     for (const suite of dbSuites) { await writeFile(join(root, suite.requiredFile), fixtureSource({ ...suite, minAssertions: 2 }, 2)); }
     await writeFile(join(root, 'run.ts'), `import { runDbBatches } from './src/db-test-runner.ts';
-await runDbBatches({ suites: ${JSON.stringify(dbSuites)}, batches: [['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts']], timeoutMs: 5000, minAssertions: 6, retainReports: './retained' });`);
+await runDbBatches({ suites: ${JSON.stringify(dbSuites)}, batches: [['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts'], ['./tests/d.test.ts']], timeoutMs: 5000, minAssertions: 8, retainReports: './retained' });`);
     await check(root);
   } finally { await rm(root, { recursive: true, force: true }); }
 }
@@ -239,10 +301,12 @@ test('DB runner executes sequential native multisuite batches and emits one exac
   await withDbFixture(async root => {
     await writeFile(join(root, 'tests/a.test.ts'), fixtureSource({ ...dbSuites[0]!, minAssertions: 2 }, 2) + '\nimport { afterAll } from "bun:test"; afterAll(async () => { await Bun.sleep(30); await Bun.write("first-finished", "yes"); });');
     await writeFile(join(root, 'tests/c.test.ts'), 'if (!(await Bun.file("first-finished").exists())) { throw new Error("Batches overlapped"); }\n' + fixtureSource({ ...dbSuites[2]!, minAssertions: 2 }, 2));
+    await writeFile(join(root, 'tests/c.test.ts'), await readFile(join(root, 'tests/c.test.ts'), 'utf8') + '\nimport { afterAll } from "bun:test"; afterAll(async () => { await Bun.sleep(30); await Bun.write("second-finished", "yes"); });');
+    await writeFile(join(root, 'tests/d.test.ts'), 'if (!(await Bun.file("second-finished").exists())) { throw new Error("Second boundary overlapped"); }\n' + fixtureSource({ ...dbSuites[3]!, minAssertions: 2 }, 2));
     const result = runDb(root);
     expect(result.exit, result.output).toBe(0);
-    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 3, fail: 0, skip: 0, assertions: 6, missing: [], exit: 0 }]);
-    expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch').map(row => row.files)).toEqual([dbSuites.slice(0, 2).map(s => s.requiredFile), [dbSuites[2]!.requiredFile]]);
+    expect(result.aggregates).toEqual([{ lane: 'restricted-postgres', pass: 4, fail: 0, skip: 0, assertions: 8, missing: [], exit: 0 }]);
+    expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch').map(row => row.files)).toEqual([dbSuites.slice(0, 2).map(s => s.requiredFile), [dbSuites[2]!.requiredFile], [dbSuites[3]!.requiredFile]]);
     expect(readdirSync(join(root, 'retained'))).toHaveLength(1);
   });
 });
@@ -266,8 +330,14 @@ test('DB runner rejects unexpected and cross owned native cases despite complete
   }
 });
 test('DB runner rejects omitted duplicate reordered batches files and manifest cases before execution', async () => {
-  const original = "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts']]";
-  for (const replacement of ["[['./tests/a.test.ts', './tests/b.test.ts']]", "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts'], ['./tests/c.test.ts']]", "[['./tests/a.test.ts'], ['./tests/c.test.ts']]", "[['./tests/a.test.ts', './tests/a.test.ts'], ['./tests/c.test.ts']]", "[['./tests/c.test.ts'], ['./tests/a.test.ts', './tests/b.test.ts']]", "[[], ['./tests/a.test.ts', './tests/b.test.ts', './tests/c.test.ts']]"]) {
+  const original = "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts'], ['./tests/d.test.ts']]";
+  for (const replacement of [
+    "[['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts', './tests/d.test.ts']]",
+    "[['./tests/a.test.ts'], ['./tests/b.test.ts'], ['./tests/c.test.ts'], ['./tests/d.test.ts']]",
+    "[['./tests/a.test.ts'], ['./tests/c.test.ts'], ['./tests/d.test.ts']]",
+    "[['./tests/a.test.ts', './tests/a.test.ts'], ['./tests/c.test.ts'], ['./tests/d.test.ts']]",
+    "[['./tests/c.test.ts'], ['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/d.test.ts']]",
+    "[[], ['./tests/a.test.ts', './tests/b.test.ts'], ['./tests/c.test.ts', './tests/d.test.ts']]"]) {
     await withDbFixture(async root => {
       await changeDbHarness(root, original, replacement);
       const result = runDb(root); rejectedDb(result);
@@ -275,7 +345,7 @@ test('DB runner rejects omitted duplicate reordered batches files and manifest c
       expect(readdirSync(join(root, 'retained'))).toEqual([]);
     });
   }
-  for (const replacement of [[dbSuites[0], dbSuites[0], dbSuites[2]], [{ ...dbSuites[0], requiredCases: ['case a', 'case a'] }, ...dbSuites.slice(1)], [{ ...dbSuites[0], requiredCases: [] }, ...dbSuites.slice(1)]]) {
+  for (const replacement of [[dbSuites[0], dbSuites[0], dbSuites[2], dbSuites[3]], [{ ...dbSuites[0], requiredCases: ['case a', 'case a'] }, ...dbSuites.slice(1)], [{ ...dbSuites[0], requiredCases: [] }, ...dbSuites.slice(1)]]) {
     await withDbFixture(async root => { await changeDbHarness(root, JSON.stringify(dbSuites), JSON.stringify(replacement)); rejectedDb(runDb(root)); });
   }
 });
@@ -285,7 +355,13 @@ test('DB runner rejects native case omission duplication skip failure zero asser
     await withDbFixture(async root => { await writeFile(join(root, 'tests/c.test.ts'), replacement); rejectedDb(runDb(root)); });
   }
   await withDbFixture(async root => { await rm(join(root, 'tests/c.test.ts')); rejectedDb(runDb(root)); });
-  await withDbFixture(async root => { await changeDbHarness(root, 'minAssertions: 6', 'minAssertions: 7'); rejectedDb(runDb(root)); });
+  await withDbFixture(async root => { await changeDbHarness(root, 'minAssertions: 8', 'minAssertions: 9'); rejectedDb(runDb(root)); });
+  await withDbFixture(async root => {
+    await changeDbHarness(root, 'minAssertions: 8', 'minAssertions: 40');
+    for (const [index, suite] of dbSuites.entries()) { await writeFile(join(root, suite.requiredFile), fixtureSource({ ...suite, minAssertions: 1 }, index === 0 ? 36 : 1)); }
+    const result = runDb(root); rejectedDb(result);
+    expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch').reduce((sum, row) => sum + row.assertions, 0)).toBe(39);
+  });
 });
 test('DB runner refuses forged console passes and aggregate diagnostics without native ownership', async () => {
   await withDbFixture(async root => {
@@ -329,6 +405,70 @@ test('DB runner bounds real child timeout reaps it and prevents later batches wi
     expect(await Bun.file(join(root, 'second-started')).exists()).toBe(false);
   });
 });
+
+// Each former duplicate's complete case inventory is now enforced natively.
+async function rejectsConsolidated(file: string) {
+  const suite = canonicalSuites.find(row => row.requiredFile === file)!;
+  expect(suite).toBeDefined();
+  for (const omitted of [null, ...suite.requiredCases]) {
+    await withDbOrchestration(async root => {
+      if (omitted === null) { await rm(join(root, file)); }
+      else { await writeFile(join(root, file), fixtureSource({ ...suite, requiredCases: suite.requiredCases.filter(name => name !== omitted), minAssertions: 40 }, 40)); }
+      const result = runOrchestration(root);
+      expect(result.exit, `${file}: ${omitted}\n${result.output}`).not.toBe(0);
+      expect(result.aggregates).toEqual([]);
+      expect(result.output).toMatch(/Required canonical database batches failed|Invalid native Bun test report|ENOENT/);
+      const batch = canonicalSuites.indexOf(suite) < 11 ? 1 : 2;
+      expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch > batch)).toEqual([]);
+      expect(result.rows.filter(row => retainedPreflights.includes(row.lane))).toEqual([]);
+    });
+  }
+}
+test('DB canonical consolidation rejects every omitted run-inspection file and exact case', async () => { await rejectsConsolidated('./tests/run-inspection.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-inspection-upgrade file and exact case', async () => { await rejectsConsolidated('./tests/run-inspection-upgrade.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-cancel file and exact case', async () => { await rejectsConsolidated('./tests/run-cancel.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-cancel-upgrade file and exact case', async () => { await rejectsConsolidated('./tests/run-cancel-upgrade.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-resume file and exact case', async () => { await rejectsConsolidated('./tests/run-resume.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-resume-upgrade file and exact case', async () => { await rejectsConsolidated('./tests/run-resume-upgrade.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted run-decision file and exact case', async () => { await rejectsConsolidated('./tests/run-decision.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted runs-http file and exact case', async () => { await rejectsConsolidated('./tests/runs-http.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted runs file and exact case', async () => { await rejectsConsolidated('./tests/runs.test.ts'); }, 30000);
+test('DB canonical consolidation rejects every omitted client-authority file and exact case', async () => { await rejectsConsolidated('./tests/client-authority.test.ts'); }, 30000);
+
+test('DB canonical adapter rejects selection overrides before creating owned resources', async () => {
+  await withDbOrchestration(async root => {
+    for (const args of [['--only'], ['--test-name-pattern', 'case'], [retentionFile]]) {
+      const child = Bun.spawnSync([process.execPath, 'scripts/test-db.ts', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 5000 });
+      expect(child.exitCode).not.toBe(0);
+      expect(child.stderr.toString()).toContain('DB lane accepts no selection overrides');
+      expect(await Bun.file(join(root, 'executions.jsonl')).exists()).toBe(false);
+      expect(readdirSync(join(root, 'scratch'))).toEqual([]);
+    }
+  });
+});
+
+test('DB runner each batch failure and timeout blocks later children and aggregate and reaps the child', async () => {
+  for (const [batch, file] of ['a', 'c', 'd'].entries()) {
+    for (const mode of ['failure', 'timeout']) {
+      await withDbFixture(async root => {
+        if (mode === 'timeout') { await changeDbHarness(root, 'timeoutMs: 5000', 'timeoutMs: 100'); }
+        for (const name of ['a', 'c', 'd']) {
+          const path = join(root, `tests/${name}.test.ts`);
+          await writeFile(path, `await Bun.write('${name}-started', 'yes');\n` + await readFile(path, 'utf8'));
+        }
+        const path = join(root, `tests/${file}.test.ts`);
+        const source = await readFile(path, 'utf8');
+        await writeFile(path, `await Bun.write('child-pid', String(process.pid));\n` + (mode === 'timeout' ? `await Bun.sleep(1000); await Bun.write('late-write', 'bad');\n${source}` : source.replace('toBe(true)', 'toBe(false)')));
+        const result = runDb(root); rejectedDb(result);
+        expect(result.rows.filter(row => row.lane === 'restricted-postgres-batch' && row.batch > batch + 1)).toEqual([]);
+        for (const later of ['a', 'c', 'd'].slice(batch + 1)) { expect(await Bun.file(join(root, `${later}-started`)).exists()).toBe(false); }
+        const pid = Number(await readFile(join(root, 'child-pid'), 'utf8'));
+        expect(() => process.kill(pid, 0)).toThrow();
+        if (mode === 'timeout') { await Bun.sleep(1100); expect(await Bun.file(join(root, 'late-write')).exists()).toBe(false); }
+      });
+    }
+  }
+}, 10000);
 
 type Suite = { requiredFile: string; minAssertions: number; requiredCases: string[] };
 const runnerUrl = new URL('../scripts/test.ts', import.meta.url);

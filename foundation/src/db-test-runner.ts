@@ -9,11 +9,11 @@ function requireValid(value: unknown): asserts value {
   if (!value) { throw new Error('Required canonical database batches failed'); }
 }
 
-// Both children use the same caller-owned DB and must run sequentially: fixtures
+// All three children use the same caller-owned DB and run sequentially: fixtures
 // rotate restricted-role passwords. Only native reports may supply test counts.
 export async function runDbBatches(options: Options) {
   const { suites, batches, timeoutMs, minAssertions } = options;
-  requireValid(batches.length === 2 && batches.every(batch => batch.length > 0));
+  requireValid(batches.length === 3 && batches.every(batch => batch.length > 0));
   const files = suites.map(suite => suite.requiredFile);
   requireValid(files.length > 0 && new Set(files).size === files.length);
   requireValid(JSON.stringify(batches.flat()) === JSON.stringify(files));

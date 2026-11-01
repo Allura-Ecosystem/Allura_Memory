@@ -15,10 +15,11 @@ test('CI accepts only complete same-source same-attempt successful nonzero lanes
 });
 test('CI database aggregation ignores preflights and batch diagnostics and requires one final native aggregate', () => {
  const log = (rows: unknown[]) => rows.map(row => JSON.stringify(row)).join('\n');
- const batches = [{ lane: 'restricted-postgres-batch', batch: 1, pass: 83, fail: 0, skip: 0, assertions: 100, missing: [], exit: 0 }, { lane: 'restricted-postgres-batch', batch: 2, pass: 280, fail: 0, skip: 0, assertions: 200, missing: [], exit: 0 }];
+ const batches = [{ lane: 'restricted-postgres-batch', batch: 1, pass: 86, fail: 0, skip: 0, assertions: 100, missing: [], exit: 0 }, { lane: 'restricted-postgres-batch', batch: 2, pass: 235, fail: 0, skip: 0, assertions: 200, missing: [], exit: 0 }, { lane: 'restricted-postgres-batch', batch: 3, pass: 48, fail: 0, skip: 0, assertions: 100, missing: [], exit: 0 }];
  const preflight = { lane: 'run-inspection', pass: 10, fail: 0, skip: 0, assertions: 99, missing: [], exit: 0 };
- const aggregate = { lane: 'restricted-postgres', pass: 363, fail: 0, skip: 0, assertions: 300, missing: [], exit: 0 };
- expect(summarizeTests('database', log([preflight, ...batches, aggregate]))).toEqual({tests: 363, assertions: 300});
+ const aggregate = { lane: 'restricted-postgres', pass: 369, fail: 0, skip: 0, assertions: 400, missing: [], exit: 0 };
+ expect(summarizeTests('database', log([...batches, aggregate]))).toEqual({tests: 369, assertions: 400});
+ expect(summarizeTests('database', log([preflight, ...batches, aggregate]))).toEqual({tests: 369, assertions: 400});
  for (const rows of [[preflight, ...batches], [batches[0]], [...batches, aggregate, aggregate], [...batches, {...aggregate, exit: 1}], [...batches, {...aggregate, fail: 1}], [...batches, {...aggregate, skip: 1}], [...batches, {...aggregate, assertions: 0}], [...batches, {...aggregate, pass: 0}], [...batches, {...aggregate, missing: ['case']}], [...batches, {...aggregate, pass: 1.5}]]) {
   expect(() => summarizeTests('database', log(rows))).toThrow();
  }
@@ -37,7 +38,7 @@ test('CI strict runner includes embedding and agent drain suites with named case
   const section=runner.slice(runner.indexOf("requiredFile:'"+file+"'" )).split('requiredFile:')[1]??'';
   expect(section).toMatch(/minAssertions:\s*[1-9]\d*/);
   const source=await Bun.file(new URL('../'+file,import.meta.url)).text();
-  for(const match of source.matchAll(/test\('([^']+)'/g)){expect(section).toContain("'"+match[1]+"'");}
+  for(const match of source.matchAll(/^test\('([^']+)'/gm)){expect(section).toContain("'"+match[1]+"'");}
   const rows=UNIT_FILES.map(requiredFile=>({requiredFile,pass:1,fail:0,skip:0,assertions:2,missingCases:[],runnerExit:0}));
   expect(()=>summarizeTests('unit',rows.filter(row=>row.requiredFile!==file).map(row=>JSON.stringify(row)).join('\n'))).toThrow();
  }

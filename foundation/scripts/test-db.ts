@@ -4,150 +4,7 @@ import { runDbBatches } from '../src/db-test-runner.ts';
 // Shared orchestration: production supplies its owned DB; regression fixtures
 // exercise these exact subprocess and native-coverage gates without a database.
 export async function runDbTests(url: string) {
-  const preflightsStarted = performance.now();
-  // Focused behavioral gate uses this same owned DB; no alternate target or
-  // selection override. Full canonical discovery still runs on every GREEN.
-  const inspectionCases = [
-    "run inspection exposes exact pinned complete evidence and page independent doctor without mutation",
-    "run inspection strict selectors and independent current human authority preserve foreign privacy",
-    "run inspection current inspector revocation serializes both attributable database orders",
-    "run inspection coherent snapshot never mixes a concurrent committed cancellation",
-    "run inspection query outages are unknown while authority store outages remain forbidden",
-    "run inspection reports inconsistent handoff links with a guard sensitive restored control",
-    "run inspection validates every projected approval decision and effect field against authoritative evidence",
-    "run inspection database time observes lease retry attempts approval and deadline without repair",
-    "run inspection missing and changed installed source preserves authorized pinned history",
-    "run inspection missing committed success journal approval links cannot verify completion",
-    "run revision six inspection preserves genuine revision five histories and refuses old execution"
-];
-  const inspections = Bun.spawnSync([process.execPath, 'test', './tests/run-inspection.test.ts', './tests/run-inspection-upgrade.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const inspectionOutput = inspections.stderr.toString(); process.stdout.write(inspections.stdout); process.stderr.write(inspectionOutput);
-  const inspectionMissing = inspectionCases.filter(name => !inspectionOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-inspection', missing: inspectionMissing, exit: inspections.exitCode }));
-  if (inspections.exitCode !== 0 || inspectionMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(inspectionOutput)) { throw new Error('Required inspection lane failed'); }
-  const cancelCases = [
-    "run cancel current scoped administrator stops work after original participant revocation",
-    "run cancellation and parallel failures preserve committed effect truth",
-    "run cancel strict envelopes replay and shared command keys preserve exact receipts",
-    "run cancelled preparation and handoff claims fence late fresh process completion",
-    "run cancel insert update deferred faults and backend termination preserve full snapshots",
-    "run cancel lost committed HTTP response reconciles in a fresh process without semantic effects",
-    "run cancel restricted SQL foreign scopes machines and owner linked clients deny without disclosure",
-    "run cancel prechecks every fence revision and journal exhaustion without partial mutation",
-    "run cancel versus prepare finish serializes both attributable database orders",
-    "run cancel versus handoff finish serializes both attributable database orders"
-];
-  const cancel = Bun.spawnSync([process.execPath, 'test', './tests/run-cancel.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const cancelOutput = cancel.stderr.toString(); process.stdout.write(cancel.stdout); process.stderr.write(cancelOutput);
-  const cancelMissing = cancelCases.filter(name => !cancelOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-cancel', missing: cancelMissing, exit: cancel.exitCode }));
-  if (cancel.exitCode !== 0 || cancelMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(cancelOutput)) { throw new Error('Required run-cancel lane failed'); }
-  const cancelUpgradeCases = [
-    "run revision five upgrade preserves genuine revision four receipts and refuses old execution"
-];
-  const cancelUpgrade = Bun.spawnSync([process.execPath, 'test', './tests/run-cancel-upgrade.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 35000 });
-  const cancelUpgradeOutput = cancelUpgrade.stderr.toString(); process.stdout.write(cancelUpgrade.stdout); process.stderr.write(cancelUpgradeOutput);
-  const cancelUpgradeMissing = cancelUpgradeCases.filter(name => !cancelUpgradeOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-cancel-upgrade', missing: cancelUpgradeMissing, exit: cancelUpgrade.exitCode }));
-  if (cancelUpgrade.exitCode !== 0 || cancelUpgradeMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(cancelUpgradeOutput)) { throw new Error('Required run-cancel-upgrade lane failed'); }
-  const resumeCases = [
-    'run resume separates durable admission claim and one linked local completion',
-    'run advance replay during committed handoff claim returns original receipt without mutation',
-    'run resume fresh processes recover admission and expired claim crashes without repeating preparation',
-    'run resume strict commands changed envelopes and cross command keys cannot create effects',
-    'run resume original humans current grants bindings and foreign scopes deny every boundary',
-    'run resume missing rejected approval stale fences and changed source never authorize handoff',
-    'run resume lost committed HTTP response reconciles exact receipt with unchanged semantic stores',
-    'run handoff owner and approved reviewer revocation serialize both attributable database orders',
-    'run handoff insert update deferred faults and terminated backend leave no partial completion',
-    'run resume expired approval never renews at admission or historical recovery',
-    'run handoff final expiry guard has valid attributable deferred entry and isolated mutant control',
-    'run resume restricted SQL authenticates before validation and dependency links reject splicing',
-    'run resume concurrent start key collision reaches uncommitted lookup and fails without another run',
-  ];
-  const resumes = Bun.spawnSync([process.execPath, 'test', './tests/run-resume.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const resumeOutput = resumes.stderr.toString(); process.stdout.write(resumes.stdout); process.stderr.write(resumeOutput);
-  const resumeMissing = resumeCases.filter(name => !resumeOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-resumes', missing: resumeMissing, exit: resumes.exitCode }));
-  if (resumes.exitCode !== 0 || resumeMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(resumeOutput)) { throw new Error('Required resume lane failed'); }
-  const resumeUpgradeCases = ['run revision four upgrade preserves genuine revision three decisions and refuses old handoff'];
-  const resumeUpgrades = Bun.spawnSync([process.execPath, 'test', './tests/run-resume-upgrade.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 30000 });
-  const resumeUpgradeOutput = resumeUpgrades.stderr.toString(); process.stdout.write(resumeUpgrades.stdout); process.stderr.write(resumeUpgradeOutput);
-  const resumeUpgradeMissing = resumeUpgradeCases.filter(name => !resumeUpgradeOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-resume-upgrades', missing: resumeUpgradeMissing, exit: resumeUpgrades.exitCode }));
-  if (resumeUpgrades.exitCode !== 0 || resumeUpgradeMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(resumeUpgradeOutput)) { throw new Error('Required resume upgrade lane failed'); }
-  const decisionCases = ['run decision approve is atomic ready handoff without execution or semantic promotion',
-    'run decision exact selectors strict SQL payloads and namespace conflicts write nothing',
-    'run decision concurrent start collision reaches post-admission lookup and returns conflict',
-    'run decision final expiry guard rolls back after attributable valid deferred entry',
-    'run decision signed HTTP rejects malformed raw UTF8 without writes and preserves exact Unicode',
-    'run decision current original participants bindings and foreign scopes cannot be substituted',
-    'run decision private SQL immutable rows scoped links and pooled contexts enforce isolation',
-    'run decision concurrent duplicates and competing choices produce one authoritative transition',
-    'run decision insert update deferred faults and backend termination leave no partial approval',
-    'run decision owner and reviewer revocation serialize both attributable database orders',
-    'run decision source drift denies new approval while exact committed replay stays historical',
-    'run decision database expiry rejects pending and in-flight approval without renewing historical replay',
-    'run decision HTTP authenticates before body and lost committed response reconciles after restart'];
-  const decisions = Bun.spawnSync([process.execPath, 'test', './tests/run-decision.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const decisionOutput = decisions.stderr.toString(); process.stdout.write(decisions.stdout); process.stderr.write(decisionOutput);
-  const decisionPass = Number(decisionOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0), decisionAssertions = Number(decisionOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-  const decisionMissing = decisionCases.filter(name => !decisionOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'run-decisions', pass: decisionPass, assertions: decisionAssertions, missing: decisionMissing, exit: decisions.exitCode }));
-  if (decisions.exitCode !== 0 || decisionPass < decisionCases.length || decisionAssertions < 1 || decisionMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(decisionOutput)) { throw new Error('Required run decision lane failed'); }
-  // Upgrade witnesses execute once under exact native canonical ownership.
-  // Their genuine lease/backoff waits and per-case bounds remain unchanged.
-  const runCases = [
-    'run HTTP inspection returns pinned scoped evidence without mutation',
-    'run HTTP cancellation persists one immutable stop receipt without an effect',
-    'run HTTP starts pauses approves and resumes one durable local handoff',
-    'run exact approval replay never authorizes changed expired or rejected evidence',
-    'run prepare SQL state and measurement constraints reject nullable forged evidence',
-    'run prepare retry due time and attempt exhaustion cannot reset through new keys',
-    'run prepare aborted work retains admission until real rollback and rejects excess leases',
-    'run prepare terminated backend reports unknown and leaves no partial effect',
-    'run prepare fresh processes recover an expired claim and fence killed execution',
-    'run prepare actual source drift blocks both claim and completion',
-    'run prepare owner and reviewer revocation serialize both finish orders',
-    'run prepare mismatch records raw measurements without success or approval',
-    'run prepare concurrent replay commits one bound approval and immutable effect',
-    'run prepare current participant loss denies claims finishes and receipt replay',
-    'run prepare strict command and stale fence reject caller asserted completion',
-    'run prepare insert update and deferred faults preserve atomic effect boundaries',
-    'run lost committed preparation response reconciles without another effect',
-    'run HTTP authenticates before body and preserves mixed identity CSRF denial',
-    'run HTTP strict selectors and input reject overrides without disclosure',
-    'run lost committed HTTP start response reconciles the original admission',
-    'run HTTP start persists one immutable scoped admission receipt',
-    'run prepare persists measured artifact evidence and pauses for independent approval',
-    'run authority denies foreign machines self review and current revocation',
-    'run restricted tables and pooled contexts preserve immutable scoped evidence',
-    'run start owner and reviewer revocation serialize in both database orders',
-    'run start insert and deferred commit faults leave no partial admission',
-    'run start retention admission is bounded and exact replay survives saturation',
-    'run restricted start rejects caller policy handlers outcomes and malformed envelopes',
-    'run start replay requires original owner and reviewer bindings',
-    'run same key concurrency yields one receipt and changed payload conflicts',
-  ];
-  const runs = Bun.spawnSync([process.execPath, 'test', './tests/runs-http.test.ts', './tests/runs.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const runsOutput = runs.stderr.toString();
-  process.stdout.write(runs.stdout); process.stderr.write(runsOutput);
-  const runsPass = Number(runsOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0);
-  const runsAssertions = Number(runsOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-  const runsMissing = runCases.filter(name => !runsOutput.includes(`(pass) ${name} [`));
-  console.log(JSON.stringify({ lane: 'runs', pass: runsPass, assertions: runsAssertions, missing: runsMissing, exit: runs.exitCode }));
-  if (runs.exitCode !== 0 || runsPass < runCases.length || runsAssertions < 1 || runsMissing.length || /\b[1-9]\d* (?:skip|fail)\b/.test(runsOutput)) { throw new Error('Required runs lane failed'); }
-  // OAuth's former duplicate preflight is consolidated into canonical native
-  // coverage below: all four files and forty exact cases remain mandatory.
-  // This intentionally removes the earlier fail-fast checkpoint, not coverage.
-  const focused = Bun.spawnSync([process.execPath, 'test', './tests/client-authority.test.ts'], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url, NO_COLOR: '1', FORCE_COLOR: '0' }, timeout: 60000 });
-  const focusedOutput = focused.stderr.toString();
-  process.stdout.write(focused.stdout); process.stderr.write(focusedOutput);
-  const focusedPass = Number(focusedOutput.match(/\b(\d+) pass\b/)?.[1] ?? 0);
-  const focusedAssertions = Number(focusedOutput.match(/\b(\d+) expect\(\) calls\b/)?.[1] ?? 0);
-  console.log(JSON.stringify({ lane: 'client-authority', pass: focusedPass, assertions: focusedAssertions, exit: focused.exitCode }));
-  if (focused.exitCode !== 0 || focusedPass < 1 || focusedAssertions < 1 || /\b[1-9]\d* (?:skip|fail)\b/.test(focusedOutput)) { throw new Error('Required client authority lane failed'); }
-  console.log(JSON.stringify({ lane: 'database-timing', phase: 'preflights', durationMs: performance.now() - preflightsStarted }));
+  // The eight audited duplicate preflights execute only under native canonical ownership.
   // Exact canonical ownership, partitioned once in the original file order.
   const suites = [
   {
@@ -785,10 +642,17 @@ export async function runDbTests(url: string) {
       "operator keyboard dialog cancels without writes and restores focus in forced colors",
       "operator route viewport matrix has named readable controls and no document overflow"
     ]
+  },
+  {
+    "requiredFile": "./tests/run-retention-journal.test.ts",
+    "requiredCases": [
+      "run retained total saturation admits one final concurrent start and preserves scoped history",
+      "run journal admission exhaustion preserves reserved handoff completion through row 128",
+      "run journal exhaustion preserves reserved cancellation after an abandoned boundary claim"
+    ]
   }
 ];
-  const boundary = suites.findIndex(suite => suite.requiredFile === './tests/runs.test.ts') + 1;
-  const batches = [suites.slice(0, boundary), suites.slice(boundary)].map(batch => batch.map(suite => suite.requiredFile));
+  const batches = [suites.slice(0, 11), suites.slice(11, 42), suites.slice(42)].map(batch => batch.map(suite => suite.requiredFile));
   await runDbBatches({ suites, batches, timeoutMs: 240000, minAssertions: 40,
     env: { ALLURA_DISPOSABLE_DB: 'owned-test-container', ALLURA_DISPOSABLE_DB_URL: url },
     retainReports: process.env.ALLURA_TEST_REPORT_DIRECTORY,
