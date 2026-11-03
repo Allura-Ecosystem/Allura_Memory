@@ -12,7 +12,7 @@ You host Allura on systems you control. It is a memory service with a web dashbo
 
 [How it works](#how-it-works) · [What you can do](#what-you-can-do) · [For developers](#for-developers) · [Project status](#project-status)
 
-> **Development preview—not a production release.** This guide describes the rebuilt source. Local tests pass, and hosted setup, real-user checks, and operational release checks are still open. Use `beta` for this rebuild; `main` and the older hosted service may differ.
+> **Main development baseline—not a verified production deployment.** The Beta rebuild is now the source baseline on `main`. Hosted setup, real-user checks, and operational release checks remain separate gates. Promoting this Git branch does not deploy or migrate the older hosted service. See [DEVELOPMENT.md](DEVELOPMENT.md) for the development workflow.
 
 ## Why use it?
 
@@ -72,7 +72,7 @@ Use the rebuilt source that includes `foundation/core-package/` and `foundation/
 Clone the rebuild branch, then enter its source directory:
 
 ```bash
-git clone --branch beta https://github.com/Allura-Ecosystem/Allura_Memory.git
+git clone --branch main https://github.com/Allura-Ecosystem/Allura_Memory.git
 cd Allura_Memory/foundation
 bun run install:frozen
 bun run check
