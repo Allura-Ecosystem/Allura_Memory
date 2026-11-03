@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-20",
+  "scope": "Fictional-data portfolio preview only",
+  "html": "/home/ronin704/ChatGPT/Allura memory/output/Allura-dashboard-preview.html",
+  "sha256": "55d87e0b4aabab782f55b6c3e2188f418329043ef1ec681b5c8f4f29a50a600c",
+  "bytes": 4235978,
+  "engine": {
+    "package": "react-force-graph-3d",
+    "version": "1.29.2",
+    "upstream": "https://github.com/vasturiano/react-force-graph",
+    "revision": "d59a72d24d310567a05d1622fd1f9f2fd13bc8fd",
+    "provenance": "visual-fixture/third-party/react-force-graph/PROVENANCE.md",
+    "license": "MIT; upstream and 43 dependency notices retained in portable HTML",
+    "installation": "preview-local pinned package and lock; root production dependency files unchanged"
+  },
+  "behavior": [
+    "Actual ForceGraph3D renderer replaces custom React Three Fiber two-lobe scene",
+    "Shared source records remain separate from mutable renderer objects",
+    "Direct connections and One step further filter exact one/two-hop neighborhoods",
+    "Allura Cream, official AL, scorecards and original-record routes preserved"
+  ],
+  "validation": {
+    "build": "Vite and self-contained packaging passed; served aliases identical; no external scripts/styles",
+    "types": "Targeted strict TypeScript passed",
+    "tests": "12 tests passed: relationship model and isolated engine adapter",
+    "lint": "Builder targeted ESLint passed",
+    "docs": "Canonical and backend residue guards passed",
+    "browser": [
+      "Native rendered sphere click opens Gabriel COO scorecard; actual engine callback marker verified",
+      "Northstar sphere opens company; linked Morgan contact and original contact route verified",
+      "Gabriel Direct: 2 records/1 link; One step further: 3 records/2 links; automatic fit verified",
+      "Initial fit defect found and fixed; final initial scene visible without manual Fit",
+      "Reduced motion final camera stable at -6.276,30.911,642.918 across observations; deliberate selection and 3D/List still usable; media override cleared",
+      "Keyboard List Gabriel Enter retains focus; View details focuses scorecard",
+      "Desktop1440/tablet820/phone390 inspected; tablet/phone no horizontal page overflow; phone defaultsList and optional3D works"
+    ],
+    "independent_review": "Munari: no blocking source or desktop/tablet/phone visual finding; runtime evidence supplied by parent"
+  },
+  "screenshots": "screenshots/react-force-graph",
+  "limitations": [
+    "Fictional 19-record/16-link sample; no production scale benchmark",
+    "Large 4.2MB portable bundle; production code splitting/performance not evaluated",
+    "WebGL context-loss fallback source-reviewed but failure not induced",
+    "No backend, real contact details, security enforcement or SOC 2 claim; local edits reset on reload"
+  ],
+  "agents": {
+    "Kotler": "Actual coordination",
+    "Rand": "Actual implementation",
+    "Munari": "Actual independent read-only review"
+  },
+  "brain": {
+    "group_id": "allura-system",
+    "search_trajectory": "12ade004-0454-4f85-9413-f2da171a9cfe",
+    "outcome": "Local artifact trace; no Brain persistence claimed because server-enforced idempotency key unavailable in exposed write schema"
+  }
+}

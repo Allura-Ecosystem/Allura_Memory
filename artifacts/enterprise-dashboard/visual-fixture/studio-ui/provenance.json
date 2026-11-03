@@ -1,0 +1,31 @@
+{
+  "upstream": "https://github.com/arhamkhnz/next-shadcn-admin-dashboard",
+  "revision": "222cc6851ab5ac8fb3a45def939c2c0df8aac818",
+  "adaptation": "Only cn imports point to the local existing clsx/tailwind-merge adapter; Allura styling is applied externally through data-slot selectors. Original component structure retained.",
+  "files": {
+    "table.tsx": {
+      "source_sha256": "749b0501e97591f8d7c9ef81366d636e4b47857a15a28e6cf3b87841232e74bf",
+      "adapted_sha256": "d468fddbe7c4edca4bffc08c6323b98467f3b4d99250bad4fb8e4e9b2b769d8d"
+    },
+    "input.tsx": {
+      "source_sha256": "75418e030b2a54dd017ac0f4588db4bbdbabca7525e88bbc9d84cb3e18bcb905",
+      "adapted_sha256": "f78126aef05076cc35d4806b53bc1155fd61a9478b519b6aa827074be9a6e1cd"
+    },
+    "textarea.tsx": {
+      "source_sha256": "82601c91ffc6c727d924162c78d7cb853114bcced4e2eb922a68ca12d4239c0f",
+      "adapted_sha256": "d001ee5b86ddf37cc5540a7260a7bb47eb0f093572132c74ca01e614f2974770"
+    },
+    "button.tsx": {
+      "source_sha256": "08e5f87833c5db8436e89337ebde0f776bcdbf649d3de69fb89be6441ca2e366",
+      "adapted_sha256": "ab225fce5f11ab69dbc4a451397dc27c17678a312682d7d614920318f1ea49fa"
+    },
+    "badge.tsx": {
+      "source_sha256": "59953420d01d23d172b4e32583426db153ff09226e2d460d53526b9f25282801",
+      "adapted_sha256": "3c92c3f72ec945e4235893e42ecd5150a3fa617edd9568adf4335442d0486e7e"
+    },
+    "avatar.tsx": {
+      "source_sha256": "036b8f39d9f42962a9eedd097103c90450d58a50ea55c693896c4cea4b5953a4",
+      "adapted_sha256": "36575145896c568972e3922f4263f04c980e803ab70e91cdf4dca99d6da2e905"
+    }
+  }
+}

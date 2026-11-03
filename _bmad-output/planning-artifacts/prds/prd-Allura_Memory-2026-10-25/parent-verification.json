@@ -1,0 +1,105 @@
+{
+  "protected_file_count": 3446,
+  "protected_changes": [],
+  "outside_scope_additions": [],
+  "original_prd_sha256": "b1db0967a7ae36f1dd1e65469d85794c7fb0507e29743545270bffa38828d9c7",
+  "updated_prd_sha256": "949a5c86f03df0c61635e18a203e640a0b820699ecaeba6545d59c13f27e6756",
+  "original_fr_ids": [
+    "FR-A1",
+    "FR-A2",
+    "FR-A3",
+    "FR-B1",
+    "FR-B2",
+    "FR-B3",
+    "FR-B4",
+    "FR-B5",
+    "FR-C1",
+    "FR-C2",
+    "FR-C3",
+    "FR-D1",
+    "FR-D2",
+    "FR-D3",
+    "FR-D4",
+    "FR-D5",
+    "FR-E1",
+    "FR-E2",
+    "FR-E3",
+    "FR-E4",
+    "FR-F1",
+    "FR-F2",
+    "FR-F3",
+    "FR-F4"
+  ],
+  "updated_fr_ids": [
+    "FR-A1",
+    "FR-A2",
+    "FR-A3",
+    "FR-B1",
+    "FR-B2",
+    "FR-B3",
+    "FR-B4",
+    "FR-B5",
+    "FR-C1",
+    "FR-C2",
+    "FR-C3",
+    "FR-D1",
+    "FR-D2",
+    "FR-D3",
+    "FR-D4",
+    "FR-D5",
+    "FR-E1",
+    "FR-E2",
+    "FR-E3",
+    "FR-E4",
+    "FR-F1",
+    "FR-F2",
+    "FR-F3",
+    "FR-F4"
+  ],
+  "missing_fr_ids": [],
+  "missing_local_links": [],
+  "canonical_sources_unchanged": true,
+  "source_manifest_checks": [
+    {
+      "path": "_bmad-output/planning-artifacts/prd.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "matched": true
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "matched": true
+    },
+    {
+      "path": "guidelines/ALLURA-BMAD.md",
+      "matched": true
+    },
+    {
+      "path": ".agents/TEAM-RAM-RUNTIME.md",
+      "matched": true
+    }
+  ],
+  "old_active_prd_absent": true,
+  "old_review_folder_absent": true,
+  "git_diff_check_exit": 0,
+  "git_diff_check_output": "",
+  "pass": true
+}

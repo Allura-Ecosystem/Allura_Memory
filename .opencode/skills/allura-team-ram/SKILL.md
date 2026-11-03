@@ -87,20 +87,20 @@ Execute the Allura skill workflow with loaded context:
 - `allura-product-intake` → loads this skill, then executes PRD creation
 - `allura-retrospective` → loads this skill, then executes retrospective
 
-### Gate 5: Notion Board Update
+### Gate 5: Operational Status and Planning Documents
 
 After any status change:
 
-1. Verify the actual board/work item before an authorized update (Status, Decision Log, Handoff Context).
-2. Existing Notion sprint tracking does not settle the unresolved operational-board choice DOC-09.
-3. Local packets are preparation evidence, not live board status. Done/Approved moves and sync retain their approval gates; report pending updates when access or authorization is absent.
+1. Verify the actual Allura work item through a supported status capability before an authorized transition; if unavailable, report operational status unknown.
+2. Notion holds planning documents only, and Allura Brain holds continuity. Neither is operational status. The approved routing does not settle DOC-09's native board/sync product choice.
+3. Local packets and BMAD sprint files are preparation evidence, not live status. Done/Approved moves retain their approval gates; report the intended transition unperformed when access or authorization is absent.
 
 ### Gate 6: Validation Evidence
 
 Before marking any story `Done`:
 
 - [ ] Appropriate package-script test lane has nonzero discovery and passes; `bun run typecheck` passes
-- [ ] Acceptance criteria met (from Notion work item)
+- [ ] Acceptance criteria met (from approved planning/canonical sources and the actual Allura work item when available)
 - [ ] Review approved (Pike for interface, Fowler for maintainability)
 - [ ] Evidence artifact created (test output, review notes, screenshots)
 - [ ] No canonical doc impact without update
@@ -151,7 +151,7 @@ For Allura Memory repo work, use the `allura-*` skills — they are the canonica
 | PRD creation | `allura-product-intake` | Jobs intent gate |
 | Retrospective | `allura-retrospective` | Brooks facilitation |
 | Party/parallel work | `party-mode` / `team-ram-cowork` | Allura-native |
-| Sprint status | Notion board | Notion source of truth |
+| Operational work status | Actual Allura status capability | Allura authority; unavailable remains unknown |
 
 ## Canonical Documentation Rule
 

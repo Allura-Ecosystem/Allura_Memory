@@ -1,0 +1,172 @@
+{
+  "protected_sources": [
+    {
+      "path": "docs/allura/BLUEPRINT.md",
+      "matches": true
+    },
+    {
+      "path": "docs/allura/SOLUTION-ARCHITECTURE.md",
+      "matches": true
+    },
+    {
+      "path": "docs/allura/DESIGN-ALLURA.md",
+      "matches": true
+    },
+    {
+      "path": "docs/allura/REQUIREMENTS-MATRIX.md",
+      "matches": true
+    },
+    {
+      "path": "docs/allura/RISKS-AND-DECISIONS.md",
+      "matches": true
+    },
+    {
+      "path": "docs/allura/DATA-DICTIONARY.md",
+      "matches": true
+    },
+    {
+      "path": "guidelines/ALLURA-BMAD.md",
+      "matches": true
+    },
+    {
+      "path": ".agents/TEAM-RAM-RUNTIME.md",
+      "matches": true
+    },
+    {
+      "path": ".claude/skills/bmad-prd/SKILL.md",
+      "matches": true
+    },
+    {
+      "path": ".claude/skills/bmad-prd/customize.toml",
+      "matches": true
+    }
+  ],
+  "story_prd_links": [
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-06.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-01.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-09.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-10.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-04.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-05A.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-03.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-07.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-00.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-05B.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-08.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    },
+    {
+      "path": "_bmad-output/implementation-artifacts/stories/DEV-02.md",
+      "line": 28,
+      "target": "../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+      "resolves_to_final_prd": true
+    }
+  ],
+  "local_links": [
+    {
+      "target": "./source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "./inputs/prd-before-update.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../.agents/TEAM-RAM-RUNTIME.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/BLUEPRINT.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/SOLUTION-ARCHITECTURE.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/DESIGN-ALLURA.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/REQUIREMENTS-MATRIX.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/RISKS-AND-DECISIONS.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../docs/allura/DATA-DICTIONARY.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../guidelines/ALLURA-BMAD.md",
+      "exists": true
+    },
+    {
+      "target": "../../../../.agents/TEAM-RAM-RUNTIME.md",
+      "exists": true
+    }
+  ],
+  "fr_ids_preserved": true,
+  "fr_count": 24,
+  "draft_unapproved": true,
+  "prd_sha256": "b1fc7ca689dd165edd78a5d5854b14283b2492a4886b72f35d7eb2fc39370e73",
+  "manifest_matches_prd": true,
+  "full_3446_file_baseline_available": false,
+  "old_active_prd_absent": true,
+  "pass": true
+}

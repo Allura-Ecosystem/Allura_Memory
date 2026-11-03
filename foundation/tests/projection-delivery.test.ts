@@ -1,0 +1,38 @@
+import {beforeAll,afterAll,test,expect} from 'bun:test';
+import {fixture} from './lifecycle-fixture.ts';
+import {deliveryFixture,type Mode} from './projection-http-fixture.ts';
+import {createProjectionTransport,deliverProjection} from '../src/projection-delivery.ts';
+import {claimProjection,markProjectionWrite,projectionStatus,revokeProjection} from '../src/projection.ts';
+import {createProjectionGateway} from '../src/projection-api.ts';
+let f:Awaited<ReturnType<typeof fixture>>;
+beforeAll(async()=>{f=await fixture('allura-projection-wire');});afterAll(async()=>{await f?.close();});
+test('projection real transport requires independent fresh read back not successful PATCH response',async()=>{
+ for(const mode of ['normal','ack-only'] as const){const r=await deliveryFixture(f,mode);try{const result=await deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport);expect(result.status).toBe(mode==='normal'?'synced':'unknown');expect(result.verifiedDigest).toBe(mode==='normal'?result.intendedDigest:null);expect(r.stats()).toEqual({reads:2,writes:1,authorized:3,wireVersion:true});await deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport);expect(r.stats().writes).toBe(1);const [decision]=await f.owner`SELECT receipt_text FROM allura.decision_receipts WHERE semantic_version_id=${r.input.semanticVersionId}::uuid`;expect(decision.receipt_text).toBe(r.semanticReceipt);if(mode==='ack-only'){await r.due();await deliverProjection(f.app,f.identities.author,f.scope,r.id,createProjectionTransport(r.entries,true));expect(r.stats().writes).toBe(1);expect((await projectionStatus(f.app,f.identities.author,f.scope,r.id)).status).toBe('unknown');}}finally{await r.close();}}
+});
+test('projection delayed write and fresh process restart reconcile without a second mutation',async()=>{
+ const r=await deliveryFixture(f,'late');try{expect((await deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport)).status).toBe('unknown');expect(r.stats().writes).toBe(1);await Bun.sleep(350);await r.due();
+ const child=Bun.spawn([process.execPath,'--eval',`import {SQL} from 'bun';import {createPublicKey} from 'node:crypto';import {authenticateHuman} from './src/authentication.ts';import {createProjectionTransport,deliverProjection} from './src/projection-delivery.ts';const input=JSON.parse(await Bun.stdin.text());const sql=new SQL(input.url);try{const identity=authenticateHuman({assertion:input.assertion},{issuer:input.issuer,audience:'fixture',keys:new Map([['key',createPublicKey(input.pem)]])});const result=await deliverProjection(sql,identity,input.scope,input.id,createProjectionTransport(input.entries,true));console.log(JSON.stringify({status:result.status,verified:result.verifiedDigest===result.intendedDigest}));}finally{await sql.close();}`],{cwd:new URL('..',import.meta.url).pathname,stdin:'pipe',stdout:'pipe',stderr:'pipe',env:{PATH:process.env.PATH,TMPDIR:process.env.TMPDIR},timeout:10000});
+ child.stdin.write(JSON.stringify({url:f.appUrl,assertion:f.jwt('author'),issuer:f.humanConfig.issuer,pem:f.humanConfig.keys.get('key')!.export({type:'spki',format:'pem'}),scope:f.scope,id:r.id,entries:r.entries}));child.stdin.end();
+ const [stdout,stderr,exit]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);expect(exit).toBe(0);expect(stderr).not.toContain(r.token);expect(JSON.parse(stdout)).toEqual({status:'synced',verified:true});expect(r.stats().writes).toBe(1);
+ }finally{await r.close();}
+},15000);
+test('projection conflict redirect overflow malformed rate limits and cancellation never permit blind writes',async()=>{
+ for(const mode of ['conflict','wrong-parent','redirect','oversize','malformed','rate','stall'] as Mode[]){const r=await deliveryFixture(f,mode);try{const before=Date.now(),result=await deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport);expect(result.status).toBe(mode==='conflict'||mode==='wrong-parent'?'failed':'unknown');expect(result.verifiedDigest).toBeNull();expect(r.stats().writes).toBe(0);expect(r.stats().reads).toBe(1);if(mode==='rate'){expect(Date.parse(result.availableAt)-before).toBeGreaterThanOrEqual(60000);}expect(JSON.stringify(result)).not.toContain(r.token);}finally{await r.close();}}
+ const r=await deliveryFixture(f);try{const abort=new AbortController();abort.abort();await expect(deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport,abort.signal)).rejects.toThrow();expect((await projectionStatus(f.app,f.identities.author,f.scope,r.id)).attempts).toBe(0);expect(r.stats().authorized).toBe(0);}finally{await r.close();}
+},15000);
+test('projection durable prewrite crash revocation and concurrent workers do not duplicate remote mutation',async()=>{
+ const r=await deliveryFixture(f);try{await Promise.all([1,2,3].map(()=>deliverProjection(f.app,f.identities.author,f.scope,r.id,r.transport)));expect(r.stats().writes).toBe(1);expect((await projectionStatus(f.app,f.identities.author,f.scope,r.id)).status).toBe('synced');}finally{await r.close();}
+ const crash=await deliveryFixture(f);try{const c=await claimProjection(f.app,f.identities.author,f.scope,crash.id);if(c.state!=='claimed'){throw new Error('missing claim');}await markProjectionWrite(f.app,f.identities.author,f.scope,crash.id,c);await crash.due();expect((await deliverProjection(f.app,f.identities.author,f.scope,crash.id,createProjectionTransport(crash.entries,true))).status).toBe('unknown');expect(crash.stats().writes).toBe(0);await revokeProjection(f.app,f.identities.author,f.scope,crash.id);await crash.due();await expect(deliverProjection(f.app,f.identities.author,f.scope,crash.id,crash.transport)).rejects.toThrow('projection_forbidden');expect(crash.stats().reads).toBe(1);}finally{await crash.close();}
+});
+test('projection HTTP scopes CSRF transfer inputs and observation reads never accept a supplied sync claim',async()=>{
+ const r=await deliveryFixture(f),handler=createProjectionGateway(f.app,f.humanConfig,'https://projection.invalid',r.transport),server=Bun.serve({hostname:'127.0.0.1',port:0,fetch:handler});
+ const url=(path:string)=>`http://127.0.0.1:${server.port}/api/projection/${path}?group_id=${f.scope.groupId}&workspace_id=${f.scope.workspaceId}`;
+ const headers={'Cf-Access-Jwt-Assertion':f.jwt('author'),'Content-Type':'application/json',Origin:'https://projection.invalid','Sec-Fetch-Site':'same-origin'};
+ try{expect((await fetch(url('delivery')+`&id=${r.id}`)).status).toBe(401);expect((await fetch(url('process'),{method:'POST',headers:{...headers,'Sec-Fetch-Site':'cross-site'},body:JSON.stringify({id:r.id})})).status).toBe(403);
+ expect((await fetch(url('process'),{method:'POST',headers,body:JSON.stringify({id:r.id,status:'synced',page:{ok:true}})})).status).toBe(400);expect(r.stats().authorized).toBe(0);
+ const result=await fetch(url('process'),{method:'POST',headers,body:JSON.stringify({id:r.id})});expect(result.status).toBe(200);expect((await result.json() as {status:string}).status).toBe('synced');
+ const read=await fetch(url('delivery')+`&id=${r.id}`,{headers});expect(read.status).toBe(200);expect(read.headers.get('cache-control')).toBe('no-store');const text=await read.text();expect(text).not.toContain(r.content);expect(text).not.toContain(r.token);expect(text).not.toContain('Explicit fixture');
+ const revoke=await fetch(url('revoke'),{method:'POST',headers,body:JSON.stringify({id:r.id})});expect(revoke.status).toBe(200);expect((await revoke.json() as {active:boolean}).active).toBe(false);
+ expect((await fetch(url('delivery')+`&id=${r.id}`,{headers:{...headers,'Cf-Access-Jwt-Assertion':f.jwt('viewer')}})).status).toBe(403);expect(r.stats().writes).toBe(1);
+ }finally{await server.stop(true);await r.close();}
+});

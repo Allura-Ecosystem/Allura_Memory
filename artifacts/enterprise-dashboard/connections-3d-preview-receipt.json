@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-20",
+  "scope": "Fictional-data React/Vite portfolio preview only",
+  "html": "/home/ronin704/ChatGPT/Allura memory/output/Allura-dashboard-preview.html",
+  "sha256": "c9950bb77a1cb4e01a1fe1eeaab4bd2d1c2abe871bc65740fca6d84b46e154fc",
+  "bytes": 3692716,
+  "changes": [
+    "Warm Allura Cream shell, official compact AL asset unchanged, shared motion tokens",
+    "True WebGL 3D Connections with two-lobe spatial layout, orbit, zoom, pause/resume and camera reset",
+    "Gabriel COO sample profile; Northstar Supply vendor and Morgan Ellis contact scorecards with original-record links",
+    "Shared graph contains 19 sample nodes and 16 explicit edges; Flat and List preserved",
+    "Selection pauses rotation; reduced-motion default paused; mobile defaults List; inspector resets on new selection"
+  ],
+  "validation": {
+    "build": "Vite and portable packaging passed; aliases byte-identical; no external script/stylesheet references",
+    "types": "Targeted strict TypeScript passed",
+    "model": "8 relationship-model tests passed",
+    "lint": "Builder targeted ESLint passed",
+    "docs": "Canonical and backend residue guards passed",
+    "browser": [
+      "Actual WebGL canvas rendered; rotation verified through changing camera coordinates",
+      "Reduced-motion camera stable; manual zoom and reset verified; media override restored",
+      "Projected Gabriel/vendor nodes and linked contact open correct scorecards",
+      "Vendor/contact original routes and Gabriel profile verified",
+      "3D, Flat and List share records",
+      "Keyboard Tab into projected node and Enter selects with focus retained",
+      "Desktop1440, tablet820, phone390 inspected; no horizontal page overflow",
+      "Phone starts List and optional 3D renders; details link focuses scorecard",
+      "Inspector selection reset verified at scrollTop0"
+    ],
+    "prior_journey_checks": "File rename/unlink shared graph updates, versioned Mortgage task review and app return, disabled app visibility verified in preceding modern refresh"
+  },
+  "specialists": {
+    "Kotler": "Actual coordination agent",
+    "Glaser": "Actual visual direction and screenshot review",
+    "Rand": "Actual tokens, component and 3D implementation",
+    "Ogilvy": "Actual plain-language copy contribution in modern refresh",
+    "Munari": "Actual independent read-only review: Ready for fictional-data portfolio preview; no remaining blocking source/screenshot finding. Actual WebGL failure recovery unexercised."
+  },
+  "screenshots": "screenshots/connections-3d",
+  "limitations": [
+    "19-node sample is not a thousands-record brain visualization or scale benchmark",
+    "No live data, real contact details, real access enforcement, backend connection or compliance claim",
+    "WebGL failure fallback implemented but actual context-loss recovery not exercised in browser",
+    "Large self-contained bundle includes Three.js; production splitting/performance work remains",
+    "Changes reset on reload"
+  ],
+  "brain": {
+    "search_trajectory": "d980c332-fe4a-4ff6-85fa-678717d973f5",
+    "group_id": "allura-system",
+    "write": "Not attempted; verified server idempotency contract unavailable. No persistence claim."
+  }
+}

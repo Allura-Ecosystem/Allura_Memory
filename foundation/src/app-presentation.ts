@@ -1,0 +1,29 @@
+import {DashboardError} from './dashboard-transport.ts';
+import type {AppView} from './app-modules.ts';
+import type {BumblebeeInventory} from './bumblebee-persistence.ts';
+import type {Scope} from './authority.ts';
+export type AppId='bumblebee'|'memory-review';
+export function appCheck(v:unknown):asserts v{if(!v){throw new DashboardError('unknown');}}
+export const appUuid=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(v);
+export function appRecord(v:unknown):Record<string,unknown>{appCheck(v!==null&&typeof v==='object'&&!Array.isArray(v));return v as Record<string,unknown>;}
+function exact(v:unknown,keys:string[]){const r=appRecord(v);appCheck(Object.keys(r).length===keys.length&&Object.keys(r).every(k=>keys.includes(k)));return r;}
+function integer(v:unknown,min=0){appCheck(typeof v==='number'&&Number.isSafeInteger(v)&&v>=min&&v<=2147483647);return v;}
+function text(v:unknown,max:number){appCheck(typeof v==='string'&&v.length>0&&v.length<=max&&!/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(v));return v;}
+function configuration(v:unknown,id:AppId){const c=exact(v,id==='bumblebee'?['sourceId']:[]);if(id==='bumblebee'){appCheck(c.sourceId===null||appUuid(c.sourceId));}return c;}
+export function readApp(value:unknown,id:AppId):AppView{
+ const v=exact(value,['id','version','revision','enabled','configuration','state','release']);appCheck(v.id===id&&(v.version==='1.0.0'||v.version==='1.0.1')&&typeof v.enabled==='boolean'&&['available','disabled','unavailable'].includes(String(v.state)));integer(v.revision);appCheck(v.enabled?v.state!=='disabled':v.state!=='available');
+ if(v.release!==null){const r=exact(v.release,['id','version','core','schema','owner','title','changes','capabilities','dependencies']),caps=id==='bumblebee'?['evidence:read','health:read']:['review:read'];appCheck(r.id===id&&r.version===v.version&&r.core==='allura-core-v1'&&r.schema===1&&r.owner==='Allura built-in'&&Array.isArray(r.dependencies)&&r.dependencies.length===0&&Array.isArray(r.capabilities)&&JSON.stringify([...r.capabilities].sort())===JSON.stringify(caps));text(r.title,128);text(r.changes,256);}
+ appCheck(v.state!=='available'||v.release!==null);if(v.configuration!==null){configuration(v.configuration,id);}appCheck(v.state!=='available'||v.configuration!==null);return v as unknown as AppView;
+}
+export function readAppRegistry(value:unknown):Record<AppId,AppView|null>{appCheck(Array.isArray(value)&&value.length<=16);const result={} as Record<AppId,AppView|null>;for(const id of ['bumblebee','memory-review'] as const){const found=value.filter(v=>v&&typeof v==='object'&&(v as {id?:unknown}).id===id);try{appCheck(found.length===1);result[id]=readApp(found[0],id);}catch{result[id]=null;}}return result;}
+export function readAppReceipt(value:unknown,input:Record<string,unknown>,scope:Scope,actorId:string){
+ const r=exact(value,['contract','appId','version','revision','enabled','configuration','actorId','eventId','scope','operationKey','capabilityChange','dataChange']),bound=exact(r.scope,['groupId','workspaceId']);appCheck(r.contract==='app-module-v1'&&r.appId===input.appId&&r.version===input.version&&r.revision===Number(input.expectedRevision)+1&&r.enabled===input.enabled&&r.actorId===actorId&&appUuid(r.eventId)&&bound.groupId===scope.groupId&&bound.workspaceId===scope.workspaceId&&r.operationKey===input.operationKey&&r.capabilityChange==='none'&&r.dataChange==='none');appCheck(r.appId==='bumblebee'||r.appId==='memory-review');const c=configuration(r.configuration,r.appId),wanted=configuration(input.configuration,r.appId);appCheck(c.sourceId===wanted.sourceId);return r;
+}
+export function readReviewData(value:unknown){
+ const v=appRecord(value);appCheck(Array.isArray(v.items)&&v.items.length<=20&&typeof v.hasMore==='boolean');const seen=new Set<string>();const items=v.items.map(item=>{const p=appRecord(item);appCheck(appUuid(p.id)&&!seen.has(p.id));seen.add(p.id);appCheck(p.state==='pending'||p.state==='needs_evidence');return {id:p.id,summary:text(p.summary,256),version:integer(p.version,1),state:p.state,summaryTruncated:p.summaryTruncated===true};});return {items,hasMore:v.hasMore};
+}
+export function readInventoryData(value:unknown,sourceId:unknown):BumblebeeInventory|null{
+ const raw=appRecord(value);if(sourceId===null){appCheck(raw.source===null&&raw.current===null);return null;}appCheck(appUuid(sourceId));const v=raw as unknown as BumblebeeInventory;appCheck(v.sourceId===sourceId&&v.source?.source?.sourceId===sourceId&&['project','baseline'].includes(v.source.source.profile)&&typeof v.source.enabled==='boolean'&&['none','approved','rejected','expired'].includes(v.source.catalogState)&&Array.isArray(v.alerts)&&v.alerts.length<=50&&typeof v.alertsTruncated==='boolean');integer(v.alertCount);appCheck(v.alertCount>=v.alerts.length&&v.alertsTruncated===(v.alertCount>v.alerts.length));
+ appCheck(Object.hasOwn(raw,'current'));if(v.current!==null){appRecord(v.current);appCheck(['fresh','stale'].includes(v.current.freshness)&&Array.isArray(v.current.packages)&&v.current.packages.length<=50&&typeof v.current.packagesTruncated==='boolean');integer(v.current.generation,1);integer(v.current.packageCount);appCheck(v.current.packageCount>=v.current.packages.length&&v.current.packagesTruncated===(v.current.packageCount>v.current.packages.length));for(const p of v.current.packages){appRecord(p);text(p.name,214);text(p.version,128);appCheck(p.ecosystem==='npm'||p.ecosystem==='pypi');}}
+ const seen=new Set<string>();for(const a of v.alerts){appRecord(a);appCheck(typeof a.alertKey==='string'&&/^[a-f0-9]{64}$/.test(a.alertKey)&&!seen.has(a.alertKey)&&appUuid(a.catalogEntryId));seen.add(a.alertKey);text(a.name,214);text(a.version,128);appCheck((a.ecosystem==='npm'||a.ecosystem==='pypi')&&a.simulation?.mode==='simulation');text(a.simulation.text,1024);}return v;
+}

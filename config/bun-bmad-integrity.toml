@@ -1,0 +1,3 @@
+# Offline BMAD integrity tests must not inherit the product's Vitest preload.
+[test]
+coverage = false

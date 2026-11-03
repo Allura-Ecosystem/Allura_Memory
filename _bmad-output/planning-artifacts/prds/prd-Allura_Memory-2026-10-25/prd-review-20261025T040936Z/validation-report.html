@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRD Validation: Allura Memory</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+
+    --grade-exc: #16a34a;
+    --grade-good: #65a30d;
+    --grade-fair: #d97706;
+    --grade-poor: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .grade {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .grade-excellent { background: var(--grade-exc); }
+  .grade-good { background: var(--grade-good); }
+  .grade-fair { background: var(--grade-fair); }
+  .grade-poor { background: var(--grade-poor); }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<style>p,li,td,code,.subtitle,.reviewer-source {overflow-wrap:anywhere} table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid var(--border);padding:8px;text-align:left;vertical-align:top}.table-scroll{overflow-x:auto} .appendix-note{color:var(--muted)}@media(max-width:600px){header.report-header{flex-wrap:wrap}.container{padding:20px 16px}}</style><body><div class="container">
+<header class="report-header"><div class="title"><h1>Allura Memory — Validation Report</h1><div class="subtitle">_bmad-output/planning-artifacts/prd.md</div></div><div class="grade grade-fair">Fair · Revise</div></header>
+<div class="synthesis"><p>This is a disciplined, substantive brownfield companion/index: it states its authority limits, preserves the governed memory thesis, separates claim states, and is unusually honest about unresolved decisions and unverified source presence. It is not yet a decision-complete or downstream-self-sufficient PRD, chiefly because owner decisions are listed as bare IDs and the local FRs do not map one-to-one to canonical acceptance evidence; those gaps are material even though the document correctly refuses to claim implementation readiness.</p>
+<p>Jobs and Brooks materially sharpen that judgment: the draft&#x27;s claim ladder and broad source-present assertions need correction, canonical decision/readiness labels must remain distinct, and engineering/evidence work must not all become questions for Sabir. Live Notion planning corroborates the approved core intent and DOC-01/06/07; historical sections and navigation lag do not supersede newer canonical decisions.</p>
+<p>Review authorization is not approval of the PRD, new product choices, implementation, publishing, or deployment. The original PRD and all six specifications remain unchanged. This is a document-quality verdict, not a claim about live product health or work status.</p></div>
+<div class="dimension-summary">
+<div class="dim-card"><div class="dim-name">Decision-readiness</div><div class="dim-verdict" style="color:var(--verdict-thin)">thin</div></div>
+<div class="dim-card"><div class="dim-name">Substance over theater</div><div class="dim-verdict" style="color:var(--verdict-strong)">strong</div></div>
+<div class="dim-card"><div class="dim-name">Strategic coherence</div><div class="dim-verdict" style="color:var(--verdict-adequate)">adequate</div></div>
+<div class="dim-card"><div class="dim-name">Done-ness clarity</div><div class="dim-verdict" style="color:var(--verdict-thin)">thin</div></div>
+<div class="dim-card"><div class="dim-name">Scope honesty</div><div class="dim-verdict" style="color:var(--verdict-strong)">strong</div></div>
+<div class="dim-card"><div class="dim-name">Downstream usability</div><div class="dim-verdict" style="color:var(--verdict-thin)">thin</div></div>
+<div class="dim-card"><div class="dim-name">Shape fit</div><div class="dim-verdict" style="color:var(--verdict-strong)">strong</div></div>
+</div>
+<section class="dimension"><details open><summary><h2>Decision-readiness</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>The draft makes the most important meta-decision clear: it is unapproved, does not replace the six canonical specifications, and does not authorize implementation (§0, lines 14–22). It also names blocked requirements at the point of impact—for example AD-65 on FR-A3, AD-66 on FR-C2, and AD-67/DOC-03/05 on FR-B5 (§3, lines 62–85)—and explicitly prohibits starting decision-blocked stories (§5, lines 121–123). Those are useful stop/go controls.</p>
+<p>However, the decision-maker cannot resolve the outstanding choices from this entry point. The “Owner decisions” line is only a list of IDs—AD-65–68, DOC-02/03/05/08/09, ENT-01–05, and metric budgets—without the question, available choices, trade-off, decision owner, or affected scope (§7, lines 133–139). That is appropriate evidence of uncertainty, but too thin for the stated purpose of a coherent review entry point.</p></div></div><div class="findings-list"><ul>
+<li><strong>high</strong> Owner decisions are discoverable but not actionable (§7, lines 133–139; §3, lines 64, 72, 77, 83–85, 92) — Bare identifiers show where work is blocked but do not let Sabir/Jobs understand or resolve the tension without independently reconstructing it from the canonical set. <em>Fix:</em> add a compact decision index sourced verbatim from the canonical documents with ID, one-sentence question, currently documented options/trade-off, owner, affected FRs, and required-by gate; do not choose an option or invent missing choices.</li>
+</ul></div></details></section>
+<section class="dimension"><details><summary><h2>Substance over theater</h2><span class="verdict-pill verdict-strong">strong</span></summary><div class="dim-body"><div class="dim-judgment"><p>The content is earned. The vision is product-specific—MCP/API-first, self-hosted, governed evidence-to-proposal-to-human-promotion-to-immutable-version retrieval (§1, lines 24–26)—and could not be swapped into a generic memory-product PRD. The listed actors drive concrete authority boundaries and journeys rather than decorative biographies (§1.1–1.2, lines 28–44); the undefined buyer and historical Maya persona are explicitly marked as unresolved/non-primary rather than padded into invented personas (lines 35–36).</p>
+<p>The NFRs likewise encode Allura-specific invariants: zero cross-scope results, immutable content and receipts, explicit unknown outcomes, redacted low-cardinality telemetry, reproducible evidence, and nonconflated claim states (§4, lines 102–113). The draft avoids fabricated scale, compliance, or launch claims and says that no numeric SLO or compliance target has been adopted.</p></div></div><div class="findings-list"><p>No substantive-theater finding.</p></div></details></section>
+<section class="dimension"><details><summary><h2>Strategic coherence</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>The document has a clear thesis: trusted memory is not raw persistence but governed promotion and scope-safe retrieval, with human independence, immutable versions, provenance, and truthful operational claims. Features A–F consistently follow that arc, and the Now/Next/Later sequence keeps the core data plane ahead of deferred work-plane and personal-AI-OS ambitions (§3–§5, lines 58–127). Counter-metrics are unusually coherent with the thesis: success may not be raised through broader fallback, bypassed review, fabricated scope, silent degradation, history deletion, or false remote-sync claims (§6, lines 129–131).</p>
+<p>The weakness is that “Success evidence” is an acceptance-evidence gate, not yet a product-success measure. DEV/CF/BE acceptance sets can prove implementation and claim truthfulness, but they do not by themselves test whether the product thesis delivers useful, current governed continuity; the draft acknowledges that metric budgets remain an owner decision (§3, line 85; §4, line 113; §7, line 136). For an unapproved companion this is acceptable, but it prevents a strong strategic-coherence verdict.</p></div></div><div class="findings-list"><ul>
+<li><strong>medium</strong> Acceptance evidence and product success are conflated by the section label (§6, lines 129–131; §3, line 85; §4, line 113) — Revision-bound test evidence proves that requirements and claims are satisfied, but it does not define how the owner will judge the usefulness of governed retrieval. <em>Fix:</em> rename the current section to “Acceptance and release evidence,” add a separate explicitly unresolved “Product success measures” subsection, and link it to the existing metric-budget owner decision; do not invent thresholds or launch metrics.</li>
+</ul></div></details></section>
+<section class="dimension"><details open><summary><h2>Done-ness clarity</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>Several requirements contain testable consequences directly: same-key changed payload conflicts (FR-A3), stale exact-version review must reject (FR-B3), denial must not widen fallback (FR-C2), remote <code>synced</code> requires destination read-back (FR-D2), and foreign workspace results must remain zero (NFR-1). The document also points to canonical DEV-AC01–12, CF-AC01–05, and BE-AC01–09 as the accepted evidence corpus (§6, lines 129–131).</p>
+<p>But most FRs are compact preservation statements followed by broad source ranges, not self-contained done conditions. Examples include “append evidence through the five core memory contracts” (FR-A1), “retrieve through controlled MCP/API services” (FR-C1), and “maintain stable … compatibility through inventory and packed-consumer evidence” (FR-F1) (§3, lines 62, 76, 97). The aggregate AC citation in §6 does not show which acceptance row closes which FR, so story creation cannot reliably determine completion without reconstructing traceability across the six specifications.</p></div></div><div class="findings-list"><ul>
+<li><strong>high</strong> Local FRs lack one-to-one acceptance traceability (§3, lines 58–100; §6, lines 129–131) — The PRD names canonical requirement and AC families, but it does not map each FR to the exact canonical acceptance condition(s), evidence class, or blocking decision. This makes “done” reconstruction-heavy and risks inconsistent story acceptance. <em>Fix:</em> add a traceability table mapping every FR to exact canonical source IDs, exact applicable AC IDs, evidence required, and any decision blocker; preserve canonical wording and IDs rather than duplicating or creating requirements.</li>
+<li><strong>medium</strong> Accessibility and responsive done conditions remain adjectival at the PRD layer (FR-E2 and NFR-6, lines 91 and 109) — “responsive/accessibility behavior,” “screen-reader readable,” and “contrast safe” do not state the bound that a downstream implementer should verify. <em>Fix:</em> cite the exact existing CF acceptance conditions or canonical accessibility standard/breakpoint evidence beside FR-E2/NFR-6; if the canonical set has no bound, mark that bound as an owner decision instead of inventing one.</li>
+</ul></div></details></section>
+<section class="dimension"><details><summary><h2>Scope honesty</h2><span class="verdict-pill verdict-strong">strong</span></summary><div class="dim-body"><div class="dim-judgment"><p>Scope handling is a major strength. The opening warning distinguishes authoring intent from readiness, excludes status and planning mutations, and states that product tests were not executed (lines 14–16). Claim states are explicitly separated (§0, line 22), the optional command center is kept outside the core engine (§1, line 26), and Now/Next/Later distinguishes source-present scope, backlog, and uncommitted intent (§5, lines 115–127). The document also preserves operational routing without pretending that failed recall or unavailable status capability proves absence (§7, lines 133–139).</p>
+<p>Omissions are not silently smoothed over: buyer definition, metric budgets, remote authority, work-board behavior, and enterprise roles are called out as owner decisions or blockers. Although there is no dedicated “Non-Goals” heading, the boundary statements in §§0, 1, 3F, and 5 perform that function for this companion/index.</p></div></div><div class="findings-list"><p>No material scope-honesty finding; the Assumptions Index roundtrip issue is recorded under Mechanical notes.</p></div></details></section>
+<section class="dimension"><details open><summary><h2>Downstream usability</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>The glossary is compact and domain-specific (§2, lines 46–56), local UJ/FR/NFR identifiers are unique and contiguous within their series, and most journeys name a role carrying the relevant authority context (§1.2, lines 38–44). Requirements also retain canonical namespaces rather than laundering them into new IDs, which is the right choice for a companion to six authoritative documents (§0, lines 18–22).</p>
+<p>The entry point is nevertheless not cleanly source-extractable on its own. It says the six authoritative files are “listed in Blueprint lines 851–876” rather than listing their repository paths (§0, line 20), while FRs mix references such as <code>B2</code>, <code>BP-F60</code>, <code>DOC-06</code>, “architecture constraint §6,” and Data Dictionary table names without a local source map (§3, lines 62–100). Combined with the missing FR-to-AC mapping, downstream UX, architecture, or story workflows must first rediscover which file owns each namespace and which acceptance conditions apply.</p></div></div><div class="findings-list"><ul>
+<li><strong>high</strong> Canonical citations are not locally resolvable from the companion (§0, line 20; §3, lines 62–100) — Referring readers to a line range in Blueprint to discover the six files undermines the PRD’s role as the brownfield entry point and makes source extraction brittle when line numbers move. <em>Fix:</em> add a six-row canonical source map with stable repository path, authority/topic, and namespaces owned; keep all requirements and decisions in their existing canonical files.</li>
+<li><strong>medium</strong> UJ-5 is a system scenario rather than a named-protagonist journey (§1.2, line 44) — “Remote projection remains honest” describes a projection invariant but does not name who initiates the action or needs the outcome, unlike UJ-1 through UJ-4. <em>Fix:</em> either name the existing-source protagonist (only if the canonical journey identifies one) and carry that context inline, or relabel UJ-5 as a system/operational scenario rather than inventing a persona.</li>
+</ul></div></details></section>
+<section class="dimension"><details><summary><h2>Shape fit</h2><span class="verdict-pill verdict-strong">strong</span></summary><div class="dim-body"><div class="dim-judgment"><p>The shape fits a high-stakes brownfield governed MCP/API memory platform. It uses a capability-contract structure rather than consumer-product ceremony, but includes a small number of journeys where multi-role authority and failure paths are load-bearing (§1.2). It explicitly distinguishes existing-source behavior, source-present evidence, verification, and release; identifies the inspected revision in frontmatter; and preserves the PRD as a companion/index instead of forcing a seventh competing specification (§0, lines 1–22).</p>
+<p>The document is neither over-formalized with persona narratives nor under-formalized about governance, isolation, lineage, replay, remote observation, and claim truthfulness. Its remaining weaknesses are traceability and decision packaging, not a mismatch between template and product.</p></div></div><div class="findings-list"><p>No shape-fit finding.</p></div></details></section>
+<section class="consolidated"><h2>Findings by severity</h2>
+<p>These are consolidated repair units, not a sum of reviewer counts. Duplicate references and journey findings are merged. Original reviewer findings and wording are preserved in the appendices and separate source files.</p>
+<h3>Critical (0)</h3>
+<p>None identified in this bounded document review. This does not certify implementation security or release readiness.</p>
+<h3>High (4)</h3>
+<h4>C01 — Restore the exact claim ladder and narrow implementation claims</h4>
+<p><strong>Source:</strong> Governance GOV-01; PRD lines 22, 56, 111, 117–119; <code>BLUEPRINT.md:30</code>; <code>REQUIREMENTS-MATRIX.md:21–35</code>; <code>DATA-DICTIONARY.md:369–395</code>.</p>
+<p>The draft uses <code>source-present/implemented</code> and a broad source-present bundle that includes known missing enforcement and remote-delivery behavior.</p>
+<p><strong>Fix:</strong> Use <code>intended → specified → implemented → verified → released</code> exactly. Treat source presence as provenance, not another status. Record capability-specific evidence and explicitly retain DOC-06/07 implementation gaps. Source inspection cannot establish deployment or live behavior.</p>
+<h4>C02 — Preserve canonical states and separate decisions from evidence work</h4>
+<p><strong>Source:</strong> Decision-readiness; Jobs first finding; Governance GOV-02; PRD lines 64, 72, 77, 123, 136; <code>RISKS-AND-DECISIONS.md:24–31,538–550,568–607</code>; <code>REQUIREMENTS-MATRIX.md:688–703</code>.</p>
+<p>The PRD collapses Proposed, Needs a decision, Needs evidence, Open, and story-specific Blocked states into a single owner list. It also misses the already-selected tooling subset within Proposed AD-68.</p>
+<p><strong>Fix:</strong> Add a sourced ledger with exact status, accountable owner, affected FR/slice, prerequisite, and next gate. Distinguish product choices, engineering proposals, evidence collection, and deferred budgets. Do not reopen approved DOC-01/06/07 or routing.</p>
+<h4>C03 — Make every FR traceable to acceptance and evidence</h4>
+<p><strong>Source:</strong> Done-ness clarity; PRD lines 58–100, 129–131; <code>REQUIREMENTS-MATRIX.md:664–709</code> and its applicable CF/BE acceptance sections.</p>
+<p>Global acceptance-family references do not show which evidence closes each requirement.</p>
+<p><strong>Fix:</strong> Map each FR to exact canonical requirement and acceptance IDs, applicable negative cases, required evidence, and decision dependencies. If an acceptance mapping is genuinely absent, expose the gap; do not invent a canonical ID or criterion.</p>
+<h4>C04 — Make canonical references resolvable from the PRD</h4>
+<p><strong>Source:</strong> Downstream usability; PRD lines 20, 62–100; <code>BLUEPRINT.md:851–876</code>.</p>
+<p>The reader must discover the six source paths through a line pointer and infer namespace ownership.</p>
+<p><strong>Fix:</strong> Add the six-document authority map below with stable repository paths and relevant section/ID references. Keep the PRD a companion, not a seventh specification.</p>
+<h3>Medium (8)</h3>
+<h4>C05 — Make the core release boundary and non-goals explicit</h4>
+<p><strong>Source:</strong> Jobs MVP/non-goals findings; PRD lines 26, 95–100, 115–127; <code>BLUEPRINT.md:163–200,233–241</code>; <code>DESIGN-ALLURA.md:55–74</code>.</p>
+<p><strong>Fix:</strong> Frame the proposed minimum outcome as authenticated capture → proposal → independent human decision → immutable receipt/version → scoped current retrieval with provenance. Keep optional dashboard, remote projection, native board/sync, and broader work-plane delivery separately gated. Explicitly exclude autonomous promotion, direct substrate mutation, fabricated claims, and governance bypass. This clarifies existing boundaries; it does not approve a new release scope.</p>
+<h4>C06 — Keep DOC-07 approved behavior separate from implementation choices</h4>
+<p><strong>Source:</strong> Jobs DOC-07 finding; PRD line 83; <code>DESIGN-ALLURA.md:1115–1121</code>; <code>RISKS-AND-DECISIONS.md:28,598–607</code>.</p>
+<p><strong>Fix:</strong> State that confirmed destination read-back and immutable decision receipts are fixed. AD-68 still needs durable handoff, current-observation read route, bounded retry/reconciliation, and destination authority design/evidence. Do not ask whether read-back is required again.</p>
+<h4>C07 — Split AD-35 accepted contract, partial source, and deferred runtime</h4>
+<p><strong>Source:</strong> Governance GOV-03; PRD lines 99, 127; <code>SOLUTION-ARCHITECTURE.md:269–315,339–353</code>; <code>DATA-DICTIONARY.md:693–744</code>.</p>
+<p><strong>Fix:</strong> Retain the accepted neutral RunRecord/policy/runtime separation and PostgreSQL operational-state ownership outside Brain. Name the partial foundation separately from the deferred full methodology runtime. Accepted BMAD installation is not completion of AD-35 or the product.</p>
+<h4>C08 — Correct five-tool semantics</h4>
+<p><strong>Source:</strong> Governance GOV-04; PRD line 62; <code>BLUEPRINT.md:308–312</code>; <code>SOLUTION-ARCHITECTURE.md:208–215</code>.</p>
+<p><strong>Fix:</strong> Say clients use the five core contracts, not that all five append evidence. <code>memory_add</code> captures evidence; search/get/list read; delete appends a deletion event and deprecates semantic content. Preserve the authenticated MCP capture boundary.</p>
+<h4>C09 — Label proposed data contracts as proposals</h4>
+<p><strong>Source:</strong> Governance GOV-05; PRD lines 64, 72, 77, 82–83; <code>DATA-DICTIONARY.md:1651–1722</code>; <code>DESIGN-ALLURA.md:1036–1039</code>.</p>
+<p><strong>Fix:</strong> Distinguish desired behavior from proposed DTO/storage names under AD-65–68. No table, schema, API, migration, or compatibility contract is adopted by repeating a proposal in this PRD.</p>
+<h4>C10 — Bind the review to actual dirty-worktree bytes</h4>
+<p><strong>Source:</strong> Governance GOV-06; PRD frontmatter and lines 14, 56, 139; <code>source-sha256.txt</code>.</p>
+<p><strong>Fix:</strong> Reference a bounded source manifest alongside HEAD. The commit alone cannot reproduce modified canonical files or the untracked draft. Do not call this working-tree snapshot merged, released, or deployed.</p>
+<h4>C11 — Separate acceptance evidence from product-success measures</h4>
+<p><strong>Source:</strong> Strategic coherence; PRD lines 85, 113, 129–136; <code>RISKS-AND-DECISIONS.md:605</code>.</p>
+<p><strong>Fix:</strong> Rename the current success section to acceptance/release evidence. Keep product-success and retrieval/latency budgets explicitly unadopted until a measured baseline and bounded recommendation exist. Buyer, pricing, and packaging are deferred market strategy, not blockers to this bounded PRD review.</p>
+<h4>C12 — Resolve accessibility bounds without inventing standards</h4>
+<p><strong>Source:</strong> Done-ness clarity; PRD lines 91, 109; canonical CF acceptance conditions and ENT-05 evidence requirement.</p>
+<p><strong>Fix:</strong> Cite the exact applicable canonical accessibility/responsive acceptance condition and evidence. Where no bound exists, identify the affected UI-story decision rather than treating adjectives as a test or inventing a new standard.</p>
+<h3>Low (3)</h3>
+<h4>C13 — Give UJ-5 the right type</h4>
+<p><strong>Source:</strong> Downstream usability/mechanical notes; PRD line 44.</p>
+<p><strong>Fix:</strong> Use the canonical protagonist if one exists, otherwise label it an operational scenario. Do not invent a persona to satisfy a template.</p>
+<h4>C14 — Repair the assumptions index</h4>
+<p><strong>Source:</strong> Mechanical notes; PRD line 139.</p>
+<p><strong>Fix:</strong> Add matching inline assumption tags where genuinely uncertain, or classify already-approved facts as constraints. Approved audience and authority are not unresolved assumptions.</p>
+<h4>C15 — Avoid live-status implications and cite the runtime contract</h4>
+<p><strong>Source:</strong> Governance GOV-07; PRD lines 121–123, 138; <code>REQUIREMENTS-MATRIX.md:683–709</code>; <code>.agents/TEAM-RAM-RUNTIME.md:142–155</code>.</p>
+<p><strong>Fix:</strong> Label the DEV order as a canonical preparation proposal, not observed backlog status. Cite the repository runtime contract for Team RAM ownership. Live work status remains unknown.</p>
+<h2>Six-document authority map</h2>
+<p>Repository-relative paths below identify the reviewed sources; <code>source-sha256.txt</code> binds their actual bytes. The governance appendix contains detailed coverage and dual citations.</p>
+<div class="table-scroll"><table>
+<tr><th>Source</th><th>Authority</th><th>Reconciliation result</th></tr>
+<tr><td><code>docs/allura/BLUEPRINT.md</code></td><td>Purpose, audience, scope, requirement intent</td><td>Core thesis aligned; correct claim ladder and five-tool wording</td></tr>
+<tr><td><code>docs/allura/SOLUTION-ARCHITECTURE.md</code></td><td>Components, boundaries, operational state</td><td>Core boundary aligned; restore AD-35 distinctions</td></tr>
+<tr><td><code>docs/allura/DESIGN-ALLURA.md</code></td><td>Behavior, journeys, references, failure states</td><td>DOC-06/07 aligned; preserve proposed contract gates</td></tr>
+<tr><td><code>docs/allura/REQUIREMENTS-MATRIX.md</code></td><td>Acceptance evidence and readiness</td><td>Add FR traceability and exact readiness labels</td></tr>
+<tr><td><code>docs/allura/RISKS-AND-DECISIONS.md</code></td><td>Accepted, proposed and unresolved choices</td><td>Preserve approval states and AD-68 selected subset</td></tr>
+<tr><td><code>docs/allura/DATA-DICTIONARY.md</code></td><td>Identity, ownership, entities, lineage</td><td>Preserve lifecycle semantics and proposed-schema boundary</td></tr>
+</table></div>
+<h2>Approved decisions that stay closed</h2>
+<ul>
+<li>DOC-01: GitHub owns six versioned engineering specifications; Notion holds private planning/approval records and links to them.</li>
+<li>Operational routing: Allura owns work status; Notion holds planning; Brain provides continuity. DOC-09 implementation remains a separate choice.</li>
+<li>DOC-06: reject stale human-reviewed proposal versions without new approval effects; replay returns the original receipt.</li>
+<li>DOC-07: remote synced requires confirmed destination read-back; observations never rewrite the decision receipt.</li>
+<li>Independent human promotion, fail-closed tenant/workspace authority, append-only evidence, immutable semantic versions, and preserved lineage remain binding.</li>
+<li>PostgreSQL is the durable substrate; Neo4j is retired. The primary audience remains developers/teams and their supporting reviewers/operators.</li>
+<li>AD-35 is Accepted with partial source and a deferred full runtime. AD-68&#x27;s bounded tooling selection remains selected; broader AD-68 remains Proposed.</li>
+</ul>
+<h2>Decision routing — not a new approval request</h2>
+<h3>Genuine product choices to package for Sabir</h3>
+<ul>
+<li><strong>AD-65:</strong> user-visible lost-acknowledgement, retry/conflict, legacy-client compatibility and applicable retention/accounting trade-offs. Brooks/Pike/Knuth supply the technical proposal; approval does not extend to unpresented storage mechanics.</li>
+<li><strong>AD-67:</strong> correction/conflict experience and renewed human review, within the already-fixed immutable-history and human-promotion rules.</li>
+<li><strong>DOC-09:</strong> whether/when to include a native board or projection surface, plus synchronization/conflict behavior. Allura&#x27;s status authority stays fixed; optional board work need not block the core memory journey.</li>
+<li><strong>DOC-02:</strong> exact visual reference/revision/assets only if the first UI story is included in the selected release; otherwise defer with the optional interface.</li>
+</ul>
+<h3>Engineering or evidence prerequisites before an owner question</h3>
+<ul>
+<li>DOC-03 restore and DOC-05 cross-proposal duplicate behavior: Brooks/data owner present bounded lineage-preserving options before Sabir chooses user-visible behavior.</li>
+<li>DOC-08: locate valid curator-first approval evidence before asking for a new decision. Failed Brain recall does not prove no approval exists.</li>
+<li>AD-66: Brooks/Knuth/Pike prepare authority, migration and restricted-role evidence. Existing isolation is fixed; any security/schema/production change still needs explicit authorization.</li>
+<li>ENT-01: prepare the workspace role/confidentiality contract before product acceptance. ENT-02–05 primarily require assigned engineering/operator/design evidence, not generic owner votes.</li>
+<li>AD-68: produce exact-revision evidence and a measured baseline before budget choices. Existing selected tooling is not reopened. New upgrades, deprecations, retention or destinations require their own bounded proposals.</li>
+<li>Buyer persona, pricing and packaging: deferred unless separately scoped. Their absence is not an immediate blocker to this PRD.</li>
+</ul>
+<h2>Reviewer reconciliation</h2>
+<p>The governance and Notion reviewers use broad lists of unresolved contracts. Those lists mean that the review did not close the records; they do not establish that every item is an immediate question for Sabir. Jobs&#x27; narrower ownership classification is adopted because the canonical decision record explicitly assigns technical drafting, evidence and later approval to different owners.</p>
+<p>The rubric calls scope honesty strong and an explicit non-goals heading optional. Jobs recommends making the boundary explicit. These are compatible: the draft is honest about limits, yet still needs clearer packaging for sign-off. Likewise, Notion supports the core truthfulness intent while Brooks correctly finds the literal claim ladder inaccurate.</p>
+<p>No reviewer approved the PRD. No numerical grade or live status is inferred from reviewer agreement.</p>
+<h2>Live Notion reconciliation</h2>
+<p>Six selected planning pages and two searches succeeded through Docker OAuth, as documented in <code>review-notion.md</code>. Parent verification independently fetched the Documentation Hub and confirmed the six-spec authority split and approved DOC-01/06/07 behavior.</p>
+<ul>
+<li>Current top-level planning supports the core governed-memory journey and independent human promotion.</li>
+<li>Historical board authority, Notion-to-repo sync, Neo4j, auto-promotion and dashboard directions are explicitly superseded, not new approvals.</li>
+<li>The navigation pages do not yet mirror the later development-readiness packet. This is planning/index lag, not a competing engineering specification.</li>
+<li>The Engine page records an unresolved memory-write hold. Further Brain writes remain paused; no release of that hold was established here.</li>
+<li>The connector did not expose an explicit truncation flag. Unvisited descendants, comments, database rows and private approvals remain outside this review.</li>
+<li><code>https://mcp.faithmeats.org/mcp</code> responded to an unauthenticated probe with HTTP 401 and valid TLS. This proves ingress response, not authenticated operation health. This session&#x27;s native recall still returned a generic tool failure; that does not establish an endpoint outage.</li>
+</ul>
+<h2>Mechanical notes</h2>
+<ul>
+<li>Merge duplicate journey and cross-reference findings rather than inflating counts.</li>
+<li>Original reviewer prose is retained below; the consolidated disposition and owner routing above resolve its broader wording.</li>
+<li>HTML uses the installed template&#x27;s CSS and collapsible dimension/reviewer structure. Headless delivery does not launch the user&#x27;s desktop browser.</li>
+</ul>
+<h2>Verification and limitations</h2>
+<p>The PRD, six canonical documents and two governing contract files all matched the pre-review SHA-256 manifest during parent reconciliation. <code>git diff --check</code> returned clean. Reviewer files were read in full; selected canonical decision/readiness passages and the live Notion Hub were independently checked.</p>
+<p>This review ran no application tests, migrations, or release acceptance. The unauthenticated endpoint response check above was connectivity telemetry only. It changed no original PRD, canonical source, Notion page, Brain record, work status, approval, commit or deployment. Source integrity and generated report structure are checked again in <code>verification.json</code>; those checks do not certify product behavior.</p>
+<h2>Recommended next action</h2>
+<p>Authorize a targeted BMAD Update of the existing PRD to apply these drafting corrections, preserve all approved decisions, and package only the remaining bounded product choices. Do not create another PRD, approve proposed schemas implicitly, or begin implementation as part of that update.</p>
+<h2>Reviewer files</h2>
+<ul>
+<li><code>review-rubric.md</code></li>
+<li><code>review-jobs.md</code></li>
+<li><code>review-governance.md</code></li>
+<li><code>review-notion.md</code></li>
+<li><code>source-sha256.txt</code></li>
+</ul></section>
+<section class="reviewer-section"><details><summary><h2>Team RAM Jobs — PRD intent-gate review</h2><span class="reviewer-source">review-jobs.md</span></summary><div class="dim-body"><h1>Team RAM Jobs — PRD intent-gate review</h1>
+<p><strong>Role:</strong> Team RAM Jobs guidance loaded through <code>allura_team(team=ram, role=jobs, task=&quot;bounded PRD intent review&quot;)</code>. This is a separate intent review, not PRD authorship or product approval.</p>
+<p><strong>Reviewed revision:</strong> <code>fcf4a33f025f69a5bc3fd120e974dd079dc65c52</code> with the existing dirty working tree identified by the review scope.</p>
+<p><strong>Objective:</strong> Keep the approved Allura promise intact, separate the smallest credible product from optional surfaces, and send Sabir only choices that materially change user experience, scope, risk, cost, or acceptance.</p>
+<h2>Verdict</h2>
+<p><strong>REVISE BEFORE OWNER SIGN-OFF.</strong> The PRD substantially preserves the approved memory-engine intent, audience, governance invariants, and DOC-01/DOC-06/DOC-07 decisions. The gate is narrower: its open-question section labels engineering design work, evidence gathering, deferred budget-setting, and contingent approvals as if they were all immediate owner product choices. It also needs a crisper MVP/non-goal boundary. These are targeted PRD corrections, not a reason to reopen approved routing or core product intent.</p>
+<h2>Approved intent that must remain closed</h2>
+<ul>
+<li><strong>Documentation authority (DOC-01):</strong> GitHub owns the six versioned engineering specifications; Notion holds private planning/drafts/approval records and links to the governing revision. This is approved, not an open routing question (<code>docs/allura/RISKS-AND-DECISIONS.md:19-23</code>; <code>docs/allura/DESIGN-ALLURA.md:19-21</code>).</li>
+<li><strong>Stale-review behavior (DOC-06):</strong> a new approval must fail when the proposal changed after human review; fresh human review is required, while successful replay returns the original receipt (<code>docs/allura/RISKS-AND-DECISIONS.md:27</code>; <code>docs/allura/DESIGN-ALLURA.md:1115-1119</code>).</li>
+<li><strong>Confirmed remote delivery (DOC-07):</strong> <code>synced</code> requires destination read-back, the decision receipt remains immutable, and delivery state is separate (<code>docs/allura/RISKS-AND-DECISIONS.md:28</code>; <code>docs/allura/DESIGN-ALLURA.md:1117-1121</code>).</li>
+<li><strong>Primary audience:</strong> developers and teams using connected agents are primary; operators and independent human reviewers support them; the enterprise dashboard is optional. The historical Maya/community persona is not the current primary audience (<code>docs/allura/BLUEPRINT.md:63-65</code>; <code>docs/allura/BLUEPRINT.md:954-960</code>).</li>
+<li><strong>Core boundary:</strong> Allura is an MCP/API-first governed memory engine. Agent orchestration and domain decisions are outside the engine; the Memory Command Center is optional (<code>docs/allura/BLUEPRINT.md:163-200</code>; <code>_bmad-output/planning-artifacts/prd.md:24-36</code>).</li>
+<li><strong>Operational routing:</strong> Allura owns work status, Notion holds planning documents, and Allura Brain provides governed continuity. That approved authority split does <strong>not</strong> select the DOC-09 board/synchronization implementation (<code>guidelines/ALLURA-BMAD.md:44-48</code>; <code>.agents/TEAM-RAM-RUNTIME.md:150-155</code>; <code>_bmad-output/planning-artifacts/prd.md:14-16,133-136</code>).</li>
+</ul>
+<h2>Findings</h2>
+<h3>High — The PRD collapses unlike gaps into one “Owner decisions” list</h3>
+<p><strong>Evidence.</strong> The PRD labels <code>AD-65–68, DOC-02/03/05/08/09, ENT-01–05 and metric budgets</code> as owner decisions (<code>_bmad-output/planning-artifacts/prd.md:133-139</code>). The canonical records distinguish them:</p>
+<ul>
+<li>DOC-08 is an evidence lookup first and reaches Sabir only if no approval exists; DOC-04 is verification, not product intent (<code>docs/allura/RISKS-AND-DECISIONS.md:29-31</code>).</li>
+<li>AD-66 assigns technical authority propagation, migration inventory, role/RLS proof, and worker review to Brooks/Knuth/Pike/Hightower; Sabir approves a later security/schema/production change before execution, but is not asked to invent the internal contract (<code>docs/allura/RISKS-AND-DECISIONS.md:578-586</code>).</li>
+<li>AD-68 already contains a bounded Hightower/Fowler tooling selection. Its broader policy remains proposed; product budgets are intentionally set only after a baseline (<code>docs/allura/RISKS-AND-DECISIONS.md:598-607</code>).</li>
+<li>ENT-02–ENT-05 are acceptance-evidence gaps owned by RAM, an authorized operator, or Durham. Only ENT-01 contains a later product-behavior acceptance after Brooks defines the compatible role contract (<code>docs/allura/RISKS-AND-DECISIONS.md:540-550</code>).</li>
+</ul>
+<p><strong>Impact.</strong> Sabir would be asked to re-decide technical details, approve evidence that has not been produced, or decide budgets before a baseline. That obscures the few choices that genuinely change the product promise.</p>
+<p><strong>Recommended disposition.</strong> <strong>Must revise before sign-off.</strong> Replace the single list with four states:</p>
+<p>1. <strong>Approved/fixed:</strong> DOC-01, DOC-06, DOC-07, routing, core invariants.</p>
+<p>2. <strong>Owner product choices:</strong> DOC-09; DOC-02 if its UI story is in the chosen release; AD-65 user-visible retry/compatibility behavior; AD-67 correction/conflict UX; later acceptance of DOC-03, DOC-05, and ENT-01 after engineering presents bounded options.</p>
+<p>3. <strong>Engineering/evidence work:</strong> DOC-04, DOC-08 lookup, AD-66, ENT-02–ENT-05, and the technical portions of AD-65/67/68.</p>
+<p>4. <strong>Deferred decisions after evidence:</strong> retrieval/latency budgets after an accepted baseline; upgrades/deprecations and any changed retention/destination policy when a concrete proposal exists.</p>
+<h3>Medium — “Now” is not a clean MVP boundary</h3>
+<p><strong>Evidence.</strong> The PRD’s “Now” bundle includes the core five-tool path, approval, retrieval, SDK/CLI points, and optional operator views, while “Next” says dashboard acceptance still waits on DOC-02/DOC-09 and enterprise role contracts (<code>_bmad-output/planning-artifacts/prd.md:115-127</code>). Canonical intent says the engine is usable without a browser and the dashboard is optional (<code>docs/allura/BLUEPRINT.md:198-200</code>; <code>docs/allura/DESIGN-ALLURA.md:55-74</code>).</p>
+<p><strong>Impact.</strong> A reader cannot tell whether optional dashboard acceptance, Notion projection, or board behavior is required before the first useful release. This weakens sequencing and allows optional polish to block the core outcome.</p>
+<p><strong>Recommended disposition.</strong> <strong>Must revise before sign-off.</strong> Define the MVP as the authenticated, scope-safe journey: capture evidence → create proposal → independent human decision → immutable receipt/version → authorized current retrieval with provenance/audit. Keep the browser dashboard optional; keep remote Notion projection separately releasable under fixed DOC-07 acceptance; keep native board/sync, governed runs, AI Office, and desktop shell outside the MVP. If a first UI story is included, name it explicitly and then resolve DOC-02 for that story only.</p>
+<h3>Medium — The PRD needs an explicit non-goals block rather than scattered exclusions</h3>
+<p><strong>Evidence.</strong> The vision and later-scope text contain exclusions, but the PRD has no dedicated non-goals section (<code>_bmad-output/planning-artifacts/prd.md:24-26,95-100,125-127</code>). The canonical Blueprint explicitly excludes ungated database editing, fabricated live metrics, decorative unsupported charts, bulk approval without rationale, generated logo marks, and dashboard actions that bypass governance (<code>docs/allura/BLUEPRINT.md:233-241</code>). It also keeps orchestration and domain decisions outside the memory-engine responsibility (<code>docs/allura/BLUEPRINT.md:30-32</code>).</p>
+<p><strong>Impact.</strong> Optional surfaces can be mistaken for core authority, and deferred platform work can creep into MVP acceptance.</p>
+<p><strong>Recommended disposition.</strong> <strong>Required drafting correction; no owner question.</strong> Add a concise non-goals section preserving: no autonomous promotion; no direct substrate mutation; no orchestration/domain-decision ownership; no fabricated health/quality/compliance claims; no dashboard bypass of MCP/API governance; no native board/sync commitment until DOC-09; no governed-runs/AI-Office/desktop-shell commitment in this implementation pack.</p>
+<h3>Medium — FR-D2 blurs approved DOC-07 intent with remaining AD-68 implementation selection</h3>
+<p><strong>Evidence.</strong> FR-D2 correctly states the approved <code>synced</code>/immutable-receipt rule but then says “Implementation details/remote authority unresolved” (<code>_bmad-output/planning-artifacts/prd.md:80-86</code>). Canonical design is more precise: DOC-07 is already approved; the transport/read route, exact retry policy, durable bridge, and destination-transfer authorization remain implementation work under AD-68 (<code>docs/allura/DESIGN-ALLURA.md:1115-1121</code>).</p>
+<p><strong>Impact.</strong> Reviewers could reopen whether remote read-back is required or treat DOC-07 as unapproved.</p>
+<p><strong>Recommended disposition.</strong> <strong>Must clarify, not re-decide.</strong> Replace the vague qualifier with: “DOC-07 behavior is fixed; AD-68 must select and verify the durable handoff, current-observation read route, bounded retry/reconciliation policy, and destination transfer authority.”</p>
+<h3>Medium — The buyer/persona marker reopens an audience question that is not needed for this PRD</h3>
+<p><strong>Evidence.</strong> The PRD marks “Buyer/commercial owner” as <code>[OWNER DECISION]</code> even though the accepted current audience is already developers/teams, with operators/reviewers supporting and enterprise UI optional (<code>_bmad-output/planning-artifacts/prd.md:28-36</code>; <code>docs/allura/BLUEPRINT.md:63-65,954-960</code>). No canonical buyer definition exists, but absence is not itself a blocker to the bounded memory product.</p>
+<p><strong>Impact.</strong> Sign-off can be diverted into a whole-market/commercial-persona exercise that does not change the current user journey or acceptance criteria.</p>
+<p><strong>Recommended disposition.</strong> <strong>Remove from current owner decisions.</strong> Label a buyer/commercial persona as deferred market strategy unless a pricing, procurement, or go-to-market milestone is separately scoped.</p>
+<h2>DOC-01 through DOC-09 disposition</h2>
+<div class="table-scroll"><table>
+<tr><th>Decision</th><th>Intent-gate classification</th><th>Recommended PRD treatment</th></tr>
+<tr><td>DOC-01</td><td><strong>Approved</strong></td><td>Preserve GitHub/Notion authority split; do not reopen.</td></tr>
+<tr><td>DOC-02</td><td><strong>Genuine owner + Durham choice, bounded to a UI story</strong></td><td>Decide exact reference/revision/assets only if that story enters the selected MVP/release.</td></tr>
+<tr><td>DOC-03</td><td><strong>Engineering contract first; contingent owner acceptance</strong></td><td>Immutable/auditable history is fixed. Brooks/data owner must present lineage-preserving restore behavior; Sabir then accepts the user-visible restore semantics.</td></tr>
+<tr><td>DOC-04</td><td><strong>Verification task</strong></td><td>Do not ask for product intent; gather reviewed-revision/deployed evidence.</td></tr>
+<tr><td>DOC-05</td><td><strong>Engineering options first; contingent product choice</strong></td><td>Brooks/data owner frame merge/link/reject/new-version effects; Sabir selects intended user behavior without inventing storage mechanics.</td></tr>
+<tr><td>DOC-06</td><td><strong>Approved</strong></td><td>Implement and verify exact reviewed-version rejection plus replay-first behavior.</td></tr>
+<tr><td>DOC-07</td><td><strong>Approved</strong></td><td>Implement and verify confirmed destination read-back and separate delivery observations.</td></tr>
+<tr><td>DOC-08</td><td><strong>Evidence task, then conditional owner decision</strong></td><td>Brooks locates the curator-first approval; ask Sabir only if no valid decision exists.</td></tr>
+<tr><td>DOC-09</td><td><strong>Genuine owner product choice</strong></td><td>Select the board/sync implementation and conflict behavior while preserving Allura as work-status authority, Notion as planning-document lane, and Brain as continuity.</td></tr>
+</table></div>
+<p>Sources: <code>docs/allura/RISKS-AND-DECISIONS.md:17-31</code>; <code>docs/allura/DESIGN-ALLURA.md:684-702</code>; <code>docs/allura/BLUEPRINT.md:896-933</code>.</p>
+<h2>AD-65 through AD-68 disposition</h2>
+<div class="table-scroll"><table>
+<tr><th>Decision</th><th>Genuine product choice</th><th>Engineering drafting/review that should not be pushed to Sabir</th></tr>
+<tr><td>AD-65</td><td>Accept user-visible lost-acknowledgement, same-key retry/conflict, and legacy-client compatibility behavior; approve any retention/product-policy tradeoff.</td><td>Key syntax, canonical digest/metadata allowlist, uniqueness/atomicity, response-version mechanics, worker leases/retries, and proof.</td></tr>
+<tr><td>AD-66</td><td>No new product promise: existing fail-closed workspace isolation is fixed. Later approval is required before a concrete security/schema/production change executes.</td><td>Opaque authority signatures, migration inventory, restricted role/RLS proof, legacy-row quarantine, index validation, and worker policy.</td></tr>
+<tr><td>AD-67</td><td>Accept correction/conflict UX: pending human review, stale-head conflict, no automatic rebase, explicit renewed review.</td><td>DTO/public mapping, base/head fields, single-head concurrency, transactionality, and lineage proof. DOC-03/05 remain separate.</td></tr>
+<tr><td>AD-68</td><td>Set product acceptance budgets only after baseline; approve concrete upgrades/deprecations or changed retention/destination policy when proposed.</td><td>CI/tooling lane selection (bounded selection already recorded), test discovery, telemetry/redaction naming, delivery route/digest normalization, baseline production, and exact-head evidence.</td></tr>
+</table></div>
+<p>Sources: <code>docs/allura/RISKS-AND-DECISIONS.md:562-607</code>; <code>docs/allura/DESIGN-ALLURA.md:1036-1130</code>.</p>
+<h2>Concise decision-only list</h2>
+<h3>Ready to put to Sabir</h3>
+<p>1. <strong>DOC-09 — implementation surface:</strong> Under the already approved routing, should Allura-owned work status have a native Allura board now, or remain without a native board while approved projections/adapters are defined? For either choice, approve sync direction and conflict behavior; Allura remains status authority.</p>
+<p>2. <strong>DOC-02 — only if UI is in the selected release:</strong> Name the exact approved screen/reference revision and assets for the first capture/review/retrieval UI story. Otherwise explicitly defer DOC-02 with the optional dashboard.</p>
+<p>3. <strong>AD-65 product behavior:</strong> Accept that lost acknowledgement is <code>unknown</code>, same-key reconciliation/retry must not duplicate evidence, changed payload conflicts, and legacy clients need an explicit compatibility window before key enforcement.</p>
+<p>4. <strong>AD-67 product behavior:</strong> Accept that correction conflicts never auto-rebase or auto-approve; the user receives a conflict and a fresh human review is required.</p>
+<h3>Do not put to Sabir until the prerequisite packet exists</h3>
+<p>5. <strong>DOC-03:</strong> a lineage-preserving restore/rollback UX recommendation from Brooks/data owner.</p>
+<p>6. <strong>DOC-05:</strong> a bounded recommendation for distinct-proposal duplicates, with user-visible effects of merge/link/reject/new-version.</p>
+<p>7. <strong>ENT-01:</strong> a compatible per-workspace role/confidentiality contract from Brooks.</p>
+<p>8. <strong>AD-68 budgets:</strong> a measured baseline and proposed acceptance thresholds; concrete upgrade/deprecation or retention/destination changes if any.</p>
+<p>9. <strong>DOC-08:</strong> only if the approval search fails and the curator-first product direction still needs an owner choice.</p>
+<p>Not owner choices: DOC-04 verification, AD-66 technical contract/evidence, ENT-02–ENT-05 acceptance evidence, hosted CI/exact-head proof, or defining a buyer persona for this bounded PRD.</p>
+<h2>Residual limitations</h2>
+<ul>
+<li>This was a documentation intent review. No product tests, live acceptance, Notion write, Allura status transition, Brain write, implementation change, commit, or deployment was performed.</li>
+<li>The workspace was already broadly dirty. This review intentionally wrote only this report.</li>
+</ul></div></details></section>
+<section class="reviewer-section"><details><summary><h2>Brooks governance review — Allura Memory PRD</h2><span class="reviewer-source">review-governance.md</span></summary><div class="dim-body"><h1>Brooks governance review — Allura Memory PRD</h1>
+<h2>Disposition</h2>
+<p><strong>REVISE BEFORE OWNER ACCEPTANCE.</strong> The PRD is a useful, governance-aware companion to the six canonical specifications, but it is not yet approval-ready because it flattens materially different decision/readiness states, uses a noncanonical claim-state alias with an overbroad <code>source-present</code> statement, and compresses accepted-but-partial AD-35 semantics. This review is <strong>not approval</strong>, does not change operational status, and authorizes no implementation, status transition, Notion/Brain write, deployment, database action, commit, or canonical edit.</p>
+<p><strong>Role activation:</strong> the requested <code>allura_team(team=&quot;ram&quot;, role=&quot;brooks&quot;, task=&quot;bounded PRD governance review&quot;)</code> mechanism was available and loaded successfully. Brooks perspective is therefore active; that is not evidence that any other specialist ran or approved the PRD.</p>
+<p><strong>Review basis:</strong> branch <code>dev/allura-beta</code>, HEAD <code>fcf4a33f025f69a5bc3fd120e974dd079dc65c52</code>, plus the working-tree files frozen by <code>source-sha256.txt</code>. The PRD itself is an untracked authoring draft and several canonical/contract files are modified in the working tree; the commit SHA alone does not identify their reviewed bytes. Bounded Brain recall had already failed and the memory-write hold remains in force (<code>scope.md:3-13</code>). No local plan, Notion page, Brain result, or BMAD output was treated as live Allura work status.</p>
+<h2>Six-document coverage</h2>
+<div class="table-scroll"><table>
+<tr><th>Canonical specification</th><th>Relevant authority extracted</th><th>PRD coverage</th><th>Brooks result</th></tr>
+<tr><td><code>docs/allura/BLUEPRINT.md</code></td><td>Six-document authority and five-step claim ladder (<code>:19-32</code>, <code>:851-876</code>); five-tool semantics (<code>:308-312</code>, <code>:882</code>); AD-35 run requirements (<code>:206-213</code>, <code>:385-408</code>); proposed BP-F59–70 (<code>:904-929</code>)</td><td>Product boundary, five-tool surface, BP-F59–70, deferred AI Office and authority split are present (<code>prd.md:20-26,62-100,115-139</code>)</td><td><strong>Partial.</strong> Core intent is preserved, but <code>source-present/implemented</code> is not the canonical ladder and FR-A1 misstates all five contracts as evidence appenders. AD-35 is compressed too broadly into “partial/deferred” and “Later.”</td></tr>
+<tr><td><code>docs/allura/SOLUTION-ARCHITECTURE.md</code></td><td>Brain is memory-only; orchestration/UI/projection are outside the data plane (<code>:50-76</code>); DOC-06/07 architecture gaps (<code>:116-120</code>); AD-35 RunRecord is outside Brain with PostgreSQL operational state (<code>:269-315</code>, <code>:339-353</code>); AD-65–68 topology remains proposed (<code>:516-565</code>)</td><td>MCP/API-first, PostgreSQL, controlled retrieval, optional UI, authority and projection separation are reflected (<code>prd.md:26,54,74-100</code>)</td><td><strong>Mostly aligned.</strong> It omits the accepted AD-35 neutral-state/policy/runtime split and makes the partial run layer look wholly future.</td></tr>
+<tr><td><code>docs/allura/DESIGN-ALLURA.md</code></td><td>Exact journey states and failures (<code>:672-702</code>); DOC-06/07 are approved intended behavior with implementation gaps (<code>:692-700</code>, <code>:1115-1121</code>); AD-65–68 design remains proposed (<code>:1036-1160</code>)</td><td>Stale-review, immutable receipt, current retrieval, unknown/degraded outcomes and remote read-back are well represented (<code>prd.md:40-44,68-86</code>)</td><td><strong>Substantively aligned.</strong> However, proposed design choices are rendered as implementation “blocked,” contrary to canonical readiness vocabulary.</td></tr>
+<tr><td><code>docs/allura/REQUIREMENTS-MATRIX.md</code></td><td>Row-level claim states (<code>:19-35</code>); all enterprise rows unreleased (<code>:43-49</code>); DEV-AC01–12 (<code>:664-681</code>); <code>Ready</code>, <code>Needs a decision</code>, and <code>Blocked</code> are distinct and authorize preparation only (<code>:683-709</code>)</td><td>Acceptance families are cited globally (<code>prd.md:129-131</code>) and a proposed preparation order is stated (<code>:121-123</code>)</td><td><strong>Insufficiently precise.</strong> No row-level current state is carried, <code>Needs a decision</code> is relabeled as blocked for AD-65/66/67, and “Next / existing backlog” can be mistaken for live status despite the draft&#x27;s status disclaimer.</td></tr>
+<tr><td><code>docs/allura/RISKS-AND-DECISIONS.md</code></td><td>DOC-06/07 approved specification; DOC-09 needs a decision (<code>:27-31</code>); AD-35 Accepted (<code>:78</code>); AD-65/66/67/68 Proposed (<code>:568-607</code>), with bounded AD-68 tooling selection but broader decisions still proposed (<code>:600-605</code>); ENT-01–05 remain open (<code>:538-550</code>)</td><td>The PRD preserves DOC-06/07 behavior, DOC-09 unresolved state, and lists AD-65–68 plus DOC/ENT IDs (<code>prd.md:41,44,64-92,123,135-136</code>)</td><td><strong>Material status loss.</strong> <code>Owner decisions</code> flattens Proposed, Needs-a-decision, Blocked-for-affected-stories, Needs-evidence and Open states. AD-68&#x27;s selected tooling subset is not distinguished from the still-proposed remainder.</td></tr>
+<tr><td><code>docs/allura/DATA-DICTIONARY.md</code></td><td>Physical journey entities and lifecycle (<code>:17-35</code>); proposal/replay/outbox fields and DOC-06/07 gaps (<code>:279-395</code>); AD-35 RunRecord/policy/runtime separation and partial implementation (<code>:693-744</code>); proposed DTOs are not implemented schemas (<code>:1651-1722</code>)</td><td><code>graph_memories</code>, <code>graph_supersedes</code>, receipts, delivery observations and authority are accurately summarized (<code>prd.md:48-56,70-83</code>)</td><td><strong>Partial.</strong> The lifecycle vocabulary is sound, but the PRD does not preserve that <code>CaptureReceiptV1</code>, <code>VectorScopeV1</code>, <code>SemanticCorrectionV1</code>, <code>RemoteDeliveryObservationV1</code>, and <code>OperationObservationV1</code> are proposed logical contracts requiring AD/schema review.</td></tr>
+</table></div>
+<h2>Current canonical status ledger</h2>
+<div class="table-scroll"><table>
+<tr><th>Record</th><th>Canonical status and consequence</th><th>PRD treatment</th><th>Governance conclusion</th></tr>
+<tr><td>DOC-06</td><td><strong>Approved specification.</strong> New approval binds the exact human-reviewed proposal version; stale review rejects without writes; successful replay returns the original receipt. Request/schema enforcement remains an implementation gap (<code>RISKS-AND-DECISIONS.md:27</code>; <code>DESIGN-ALLURA.md:1115-1118</code>; <code>DATA-DICTIONARY.md:369-371</code>).</td><td>Behavior is correct (<code>prd.md:41,70</code>), but approved intent versus unimplemented enforcement is not stated at the requirement.</td><td>Preserve as approved behavior; do not ask the owner to decide it again. DEV-05B is Ready only for bounded preparation/execution under ordinary approvals and independent acceptance (<code>REQUIREMENTS-MATRIX.md:698</code>).</td></tr>
+<tr><td>DOC-07</td><td><strong>Approved specification.</strong> Remote <code>synced</code> requires authorized destination read-back; local <code>delivered</code> is not sync; the decision receipt remains immutable. Remote handoff/read model remains missing (<code>RISKS-AND-DECISIONS.md:28</code>; <code>DESIGN-ALLURA.md:1119-1121</code>; <code>DATA-DICTIONARY.md:391-395</code>).</td><td>Correct behavior and unresolved implementation/authority (<code>prd.md:44,83</code>).</td><td>Preserve as approved behavior with an open implementation/evidence gap; do not label it an unresolved product decision.</td></tr>
+<tr><td>DOC-09</td><td><strong>Needs a decision:</strong> authoritative operational board, sync direction and conflict rules (<code>RISKS-AND-DECISIONS.md:30</code>).</td><td>Correctly unresolved and separated from approved routing (<code>prd.md:16,92,135</code>).</td><td>Preserved. Allura status / Notion planning / Brain continuity does not resolve DOC-09.</td></tr>
+<tr><td>AD-35</td><td><strong>Accepted.</strong> Neutral <code>RunRecord</code>, policy and runtime-state separation; repository process-engine foundation is partial; full methodology runtime remains deferred until a concrete unmet use case (<code>RISKS-AND-DECISIONS.md:78</code>; <code>SOLUTION-ARCHITECTURE.md:269-302</code>; <code>DATA-DICTIONARY.md:693-744</code>).</td><td><code>partial/deferred</code> and then wholly grouped into Later (<code>prd.md:99,127</code>).</td><td>Split the accepted contract, current partial source, and deferred full runtime. Brain must not become the orchestrator; PostgreSQL owns operational run state.</td></tr>
+<tr><td>AD-65</td><td><strong>Proposed.</strong> Capture key/digest, atomic event/receipt/replay/index-intent and compatibility/retry policy (<code>RISKS-AND-DECISIONS.md:568-576</code>).</td><td>“Implementation blocked” and grouped as owner decision (<code>prd.md:64,123,136</code>).</td><td>Use <strong>Needs a decision</strong> for DEV-03, not canonical <code>Blocked</code> (<code>REQUIREMENTS-MATRIX.md:695</code>).</td></tr>
+<tr><td>AD-66</td><td><strong>Proposed.</strong> Opaque workspace authority through vector paths; scoped degradation only; deployed impact unverified (<code>RISKS-AND-DECISIONS.md:578-586</code>).</td><td>“Blocked” (<code>prd.md:77</code>).</td><td>Use <strong>Needs a decision</strong> plus deployed migration/role evidence for DEV-04 (<code>REQUIREMENTS-MATRIX.md:696</code>). Do not imply a demonstrated live leak.</td></tr>
+<tr><td>AD-67</td><td><strong>Proposed.</strong> Governed correction, base-head and DOC-06 concurrency checks; preserve lineage (<code>RISKS-AND-DECISIONS.md:588-596</code>).</td><td>“Blocked” (<code>prd.md:72</code>).</td><td>Use <strong>Needs a decision</strong> for DEV-05A; only DOC-03/05 affected restore/duplicate stories carry their own blocks (<code>REQUIREMENTS-MATRIX.md:697</code>).</td></tr>
+<tr><td>AD-68</td><td><strong>Proposed overall.</strong> Main CI + retained Epic 24 checks, Bun 1.3.14, Node 24.19.0, frozen install/digests, real ESLint and strict discovery were selected on 2026-10-22; hosted exact-head/lint evidence and broader delivery, telemetry, retention, budgets, upgrades and release remain open (<code>RISKS-AND-DECISIONS.md:598-607</code>).</td><td>FR-D3 states the selected requirements, but all of AD-68 is listed generically as an owner decision (<code>prd.md:84,123,136</code>).</td><td>Record the bounded tooling selection separately; retain the remainder as Proposed. Selection is not hosted acceptance or product readiness.</td></tr>
+</table></div>
+<h2>Findings</h2>
+<h3>GOV-01 — High — Canonical claim ladder is blurred and the <code>Now</code> claim is overbroad</h3>
+<ul>
+<li><strong>PRD:</strong> <code>intended → specified → source-present/implemented → verified → released</code> and a broad bundle labeled <code>Source-present/tests-unverified</code> (<code>prd.md:22,56,117-119</code>).</li>
+<li><strong>Canon:</strong> exact ladder is <code>intended → specified → implemented → verified → released</code>; implementation evidence is source-specific, verification is revision-bound, and release needs deployment/acceptance (<code>BLUEPRINT.md:30</code>; <code>REQUIREMENTS-MATRIX.md:21-35</code>). DOC-06 reviewed-version enforcement is not implemented; DOC-07 remote handoff is missing; dashboard/Cloudflare observations are source-local/excluded or unreleased (<code>DESIGN-ALLURA.md:698-702</code>; <code>DATA-DICTIONARY.md:10,371,393-395</code>; <code>REQUIREMENTS-MATRIX.md:43-49</code>).</li>
+<li><strong>Why it matters:</strong> joining <code>source-present</code> and <code>implemented</code>, then applying that label to a mixed bundle, can promote a file&#x27;s existence into implementation evidence for behavior that canon explicitly says is absent.</li>
+<li><strong>Required repair:</strong> keep the exact five canonical states. Treat “source inspected/present in the reviewed working tree” as evidence provenance, not a claim state. Replace the <code>Now</code> paragraph with capability-by-capability states, explicitly naming DOC-06, DOC-07, dashboard/auth and run-layer gaps.</li>
+</ul>
+<h3>GOV-02 — High — Decision and readiness states are flattened or mislabeled</h3>
+<ul>
+<li><strong>PRD:</strong> AD-65/66/67 requirements say <code>blocked</code>; §7 labels AD-65–68, DOC-02/03/05/08/09 and ENT-01–05 collectively as <code>Owner decisions</code> (<code>prd.md:64,72,77,123,136</code>).</li>
+<li><strong>Canon:</strong> AD-65–68 are <strong>Proposed</strong> (<code>RISKS-AND-DECISIONS.md:568-607</code>). DEV-03/04/05A are <strong>Needs a decision</strong>, not <code>Blocked</code>; DEV-05B is Ready for a bounded story (<code>REQUIREMENTS-MATRIX.md:688-703</code>). DOC-02/05/09 are Needs a decision; DOC-03 is Blocked only for restore/rollback stories; DOC-08 Needs evidence (<code>RISKS-AND-DECISIONS.md:24-31</code>); ENT-01–05 are open contracts (<code>:538-550</code>).</li>
+<li><strong>Why it matters:</strong> these labels carry different authority and execution consequences. “Blocked,” “Proposed,” “Needs evidence,” and “Needs a decision” are not synonyms.</li>
+<li><strong>Required repair:</strong> add a compact decision/readiness ledger with the exact canonical label, owner, affected FR/slice and next evidence. Do not reopen DOC-06/07.</li>
+</ul>
+<h3>GOV-03 — Medium — AD-35 accepted architecture and data semantics are underrepresented</h3>
+<ul>
+<li><strong>PRD:</strong> the run layer is described only as <code>partial/deferred</code> and grouped into Later (<code>prd.md:99,127</code>).</li>
+<li><strong>Canon:</strong> AD-35 is Accepted; a partial source foundation exists. <code>RunRecord</code> is neutral durable state outside the Brain data plane, with policy and runtime state separate; PostgreSQL owns operational run records/events, while full methodology runtime/product APIs remain deferred (<code>RISKS-AND-DECISIONS.md:78</code>; <code>SOLUTION-ARCHITECTURE.md:269-302,339-353</code>; <code>DATA-DICTIONARY.md:693-744</code>).</li>
+<li><strong>Required repair:</strong> split (a) accepted contract, (b) partial implementation, and (c) deferred full runtime. State that BMAD 6.12.4 registration/installation acceptance is methodology-tooling evidence only, not completion of AD-35 or product readiness (<code>guidelines/ALLURA-BMAD.md:71-91</code>).</li>
+</ul>
+<h3>GOV-04 — Medium — FR-A1 misstates the five-tool interface semantics</h3>
+<ul>
+<li><strong>PRD:</strong> “append evidence through the five core memory contracts” (<code>prd.md:62</code>).</li>
+<li><strong>Canon:</strong> <code>memory_add</code> appends evidence; <code>memory_search</code>, <code>memory_get</code>, and <code>memory_list</code> read; <code>memory_delete</code> appends a deletion event and marks semantic content deprecated (<code>BLUEPRINT.md:308-312</code>). Canonical <code>memory_add</code> is available only through authenticated MCP transports, not a generic REST write (<code>SOLUTION-ARCHITECTURE.md:208-215</code>).</li>
+<li><strong>Required repair:</strong> say “use the five core memory contracts,” then separately specify governed evidence capture through <code>memory_add</code> and soft deletion semantics through <code>memory_delete</code>.</li>
+</ul>
+<h3>GOV-05 — Medium — Proposed data contracts are presented without their schema/approval boundary</h3>
+<ul>
+<li><strong>PRD:</strong> FR-A3/B5/C2/D1/D2 adopt behavior mapped to the development-readiness packet, but do not state that its DTO names/storage contracts remain proposals (<code>prd.md:64,72,77,82-83</code>).</li>
+<li><strong>Canon:</strong> <code>CaptureReceiptV1</code>, <code>IndexIntentV1</code>/<code>VectorScopeV1</code>, <code>SemanticCorrectionV1</code>, <code>RemoteDeliveryObservationV1</code>, and <code>OperationObservationV1</code> are logical proposals only; no table, schema, endpoint or migration is adopted until AD-65–68 and schema review (<code>DATA-DICTIONARY.md:1651-1722</code>; <code>DESIGN-ALLURA.md:1036-1039</code>).</li>
+<li><strong>Required repair:</strong> retain the user outcomes as proposed requirements, but add a clear “proposed contract shape; no schema/API adoption” qualifier and avoid binding implementation to unapproved names.</li>
+</ul>
+<h3>GOV-06 — Medium — Snapshot provenance is not reproducible from the PRD alone</h3>
+<ul>
+<li><strong>PRD:</strong> frontmatter records only commit <code>fcf4a33…</code>, while also acknowledging a dirty checkout (<code>prd.md:9,14,56,139</code>).</li>
+<li><strong>Evidence:</strong> HEAD matches that commit, but the PRD is untracked and canonical/contract files include working-tree modifications. The review bundle separately records byte hashes in <code>source-sha256.txt</code>.</li>
+<li><strong>Why it matters:</strong> the commit cannot reproduce the actual specification bytes used for this draft.</li>
+<li><strong>Required repair:</strong> add a bounded source-manifest reference or digest to the PRD frontmatter. Do not call the working-tree snapshot a released or merged revision.</li>
+</ul>
+<h3>GOV-07 — Low — Local planning wording and runtime-role citation need tightening</h3>
+<ul>
+<li><strong>PRD:</strong> <code>Next (existing DEV backlog)</code> and a sequence “as grouped in epics.md” (<code>prd.md:121-123</code>) can read like current work status; Team RAM roles are sourced to <code>.opencode/AGENTS.md</code> (<code>:138</code>).</li>
+<li><strong>Contract:</strong> local plans/stories cannot establish live status; unavailable status stays unknown (<code>guidelines/ALLURA-BMAD.md:44-57,91-103</code>; <code>.agents/TEAM-RAM-RUNTIME.md:24-30,142-155</code>). Runtime routing authority is the repository Team RAM/runtime contract.</li>
+<li><strong>Required repair:</strong> relabel the sequence “canonical preparation proposal; not live status,” cite <code>REQUIREMENTS-MATRIX.md:683-709</code>, and cite <code>.agents/TEAM-RAM-RUNTIME.md</code> for runtime authority. The PRD&#x27;s explicit unknown-status statements (<code>:16,135</code>) are preserved.</li>
+</ul>
+<h2>Preserved decisions and controls</h2>
+<ul>
+<li>The PRD remains a noncanonical, unapproved companion; the six GitHub specifications retain engineering authority (<code>prd.md:14-22</code>; <code>BLUEPRINT.md:851-876</code>).</li>
+<li>Allura owns operational status, Notion planning, and Brain continuity; none substitutes for another and this does not resolve DOC-09 (<code>prd.md:16,135</code>; <code>ALLURA-BMAD.md:44-57</code>).</li>
+<li>DOC-06 and DOC-07 are approved intended behavior with implementation gaps, not open product choices.</li>
+<li>Independent human approval is mandatory; score, legacy <code>auto</code>, tool success, agent persona, or BMAD phase completion cannot promote knowledge (<code>prd.md:68-70</code>; <code>ALLURA-BMAD.md:59-69</code>).</li>
+<li>PostgreSQL is the durable evidence/proposal/semantic/receipt/outbox substrate; Neo4j is retired; events and semantic history remain append-only/immutable with lineage.</li>
+<li>Local outbox <code>delivered</code> is not remote <code>synced</code>; projection observations never mutate the approval receipt.</li>
+<li>Server-resolved principal/tenant/workspace/action authority controls access; <code>group_id</code> format and request fields do not grant authority; denied scope cannot broaden fallback.</li>
+<li>Review permission is not approval. BMAD installation/registration evidence is distinct from product implementation, verification, release, or live work status.</li>
+</ul>
+<h2>Unresolved choices that remain with owners</h2>
+<p>1. <strong>AD-65:</strong> capture-key syntax, digest metadata allowlist/default normalization, legacy-client compatibility, admission accounting, retry/claim policy, response scoring compatibility and replay retention.</p>
+<p>2. <strong>AD-66:</strong> internal authority signatures, restricted-role/RLS proof, migration applicability, vector model/dimension/index identity, legacy-row quarantine and worker lease/retry details.</p>
+<p>3. <strong>AD-67:</strong> correction request/storage fields, base/current-head uniqueness and concurrency mechanism; DOC-03 restore and DOC-05 cross-proposal duplicate behavior remain separate.</p>
+<p>4. <strong>AD-68 remainder:</strong> delivery-observation read route, Notion digest normalization, retry/reconciliation, telemetry fields/retention/destination, retrieval budgets/baseline, upgrades/removals/deprecations and release evidence. The bounded CI/runtime selection is already recorded and must not be re-decided implicitly.</p>
+<p>5. <strong>DOC-02/03/05/08/09:</strong> exact visual reference; restore/lineage; duplicate policy; curator-first evidence; authoritative board/sync/conflict rules.</p>
+<p>6. <strong>ENT-01–05:</strong> workspace role/confidentiality behavior, restricted-role/RLS evidence, complete administration/device/audit flows, production identity/session evidence, and actual responsive/accessibility evidence.</p>
+<p>7. <strong>Product choices:</strong> buyer/commercial persona, product-success and retrieval/latency/scale budgets. No values are invented here.</p>
+<h2>Close</h2>
+<p>The PRD&#x27;s governed-memory thesis, DOC-06/07 behavior, DOC-09 separation, PostgreSQL-only architecture, human approval gate and claim-truthfulness intent are sound. Approval-readiness depends on correcting the status ledger, restoring exact claim-state semantics, narrowing source-present claims, and making AD-35/proposed data-contract boundaries explicit. No canonical decision, implementation state, operational status or approval was changed by this review.</p></div></details></section>
+<section class="reviewer-section"><details><summary><h2>Live Notion planning reconciliation — Allura PRD</h2><span class="reviewer-source">review-notion.md</span></summary><div class="dim-body"><h1>Live Notion planning reconciliation — Allura PRD</h1>
+<ul>
+<li><strong>Review mode:</strong> read-only source reconciliation; no Notion, Brain, status, approval, or canonical-document writes</li>
+<li><strong>Retrieved:</strong> 2026-10-25T04:11:19Z</li>
+<li><strong>PRD reviewed:</strong> [<code>../prd.md</code>](../prd.md), status <code>authoring-draft-unapproved</code>, updated 2026-10-25, source revision <code>fcf4a33f025f69a5bc3fd120e974dd079dc65c52</code></li>
+<li><strong>Canonical local authorities:</strong> [<code>docs/allura/RISKS-AND-DECISIONS.md</code>](../../../docs/allura/RISKS-AND-DECISIONS.md) and [<code>guidelines/ALLURA-BMAD.md</code>](../../../guidelines/ALLURA-BMAD.md)</li>
+<li><strong>Method:</strong> Docker OAuth <code>notion-remote</code> through <code>notion-fetch</code> and <code>notion-search</code> only. Page recency and successful authentication were treated as access evidence, not approval or reconciliation proof.</li>
+</ul>
+<h2>Source coverage and metadata</h2>
+<div class="table-scroll"><table>
+<tr><th>Source</th><th>URL</th><th>Notion metadata / status</th><th>Coverage and completeness</th></tr>
+<tr><td>Allura Documentation Hub</td><td>https://app.notion.com/p/3ca1d9be65b3818c8680cef760371320</td><td>Last edited / fetch snapshot <code>2026-10-18T22:30:49.576Z</code>; verification state <code>unverified</code></td><td>Fetched. Current authority, publication, DOC-01/06/07, active/superseded-page map, and archive boundary reviewed. Response closed the page/content tags and carried no truncation marker. The connector did not expose an explicit <code>truncated</code> boolean.</td></tr>
+<tr><td>Allura Memory — Engine</td><td>https://app.notion.com/p/33b1d9be65b38045b6b0fa8c48dbc17b</td><td>Last edited <code>2026-10-21T12:51:20.468Z</code>; fetch snapshot <code>2026-10-21T12:51:31.901Z</code>; verification state <code>unverified</code>; path <code>Faith Meats HQ</code></td><td>Fetched. Current header, memory-write hold, six-document index, architecture, DOC-01/06/07, planning links, and preserved historical toggle reviewed. No truncation marker; no explicit connector <code>truncated</code> field.</td></tr>
+<tr><td>Allura Blueprint — private working reference</td><td>https://app.notion.com/p/be31d9be65b3828cb46e81b1d1078f3a</td><td>Last edited / fetch snapshot <code>2026-10-18T22:30:51.624Z</code>; verification state <code>unverified</code></td><td>Fetched because the Hub identifies it as the selected private working Blueprint. Current product intent, reference journey, boundaries, and historical toggle reviewed. No truncation marker.</td></tr>
+<tr><td>Risks and Decisions: Allura</td><td>https://app.notion.com/p/33c1d9be65b3817988eae1752da36cdb</td><td>Last edited / fetch snapshot <code>2026-10-18T22:31:00.349Z</code>; verification state <code>unverified</code></td><td>Fetched because it is the Engine&#x27;s current private decision/risk navigation page. Current reconciliation findings and preserved historical toggle reviewed. No truncation marker.</td></tr>
+<tr><td>Requirements Matrix: Allura</td><td>https://app.notion.com/p/df7e57400a574c619f60442834fed2d5</td><td>Last edited / fetch snapshot <code>2026-10-18T22:30:58.439Z</code>; verification state <code>unverified</code></td><td>Fetched because it is the Engine&#x27;s current private acceptance/evidence navigation page. Current claim-state and acceptance boundary reviewed. No truncation marker.</td></tr>
+<tr><td>Allura Memory Finish Plan</td><td>https://app.notion.com/p/3631d9be65b381d58d05f66eaadc946e</td><td>Last edited / fetch snapshot <code>2026-08-02T08:27:52.400Z</code>; verification state <code>unverified</code></td><td>Fetched as the directly linked closure/blocker plan. Its May–August status, architecture, dashboard, and board claims are materially dated. No truncation marker.</td></tr>
+<tr><td>Workspace searches</td><td>Query results for <code>Allura PRD product requirements</code> and <code>DOC-09 Allura board synchronization</code></td><td>Search executed 2026-10-25; all returned pages were <code>unverified</code></td><td>Used to distinguish active pages from archived/recovery duplicates and identify coverage gaps. Search did not return a current Allura product PRD that supersedes the repository draft.</td></tr>
+</table></div>
+<p><strong>Fetch failures:</strong> none. All six selected page fetches and both searches returned successfully. This does not prove that unvisited descendants, private discussions, database rows, or linked evidence are complete or approved.</p>
+<h2>Agreements with the PRD</h2>
+<p>1. <strong>Authority split is aligned.</strong> The Hub says, exactly: “<strong>Notion is the private authority for strategy, planning, approvals, and working decisions. It is not the published engineering truth.</strong>” The current Engine says it “<strong>does not define a competing architecture, API schema or deployment contract</strong>.” This agrees with PRD §§0 and 7 and with <code>ALLURA-BMAD.md</code>: GitHub&#x27;s six documents own engineering truth; Notion holds private planning; Allura owns operational work-item status; Brain provides governed continuity.</p>
+<p>2. <strong>The product boundary and core journey agree.</strong> The private Blueprint says: “<strong>Allura provides governed memory for AI agents and human operators: capture evidence, review proposals, retrieve scoped knowledge and retain an audit trail.</strong>” It defines “<strong>capture → human review → retrieval</strong>,” matching PRD vision, UJ-1/2/3, and Features A–C.</p>
+<p>3. <strong>PostgreSQL-only durable architecture is consistent.</strong> Current Blueprint and Engine both state that PostgreSQL stores episodic events, proposals, semantic records, lineage, and RuVector/pgvector retrieval, while Neo4j is retired under AD-50. This agrees with PRD §§1, 5, and FR-F2. Historical Neo4j language remains only inside explicitly superseded toggles.</p>
+<p>4. <strong>Independent human promotion remains mandatory.</strong> Current Blueprint: “<strong>A score or the legacy <code>auto</code> mode does not authorize semantic promotion.</strong>” This supports PRD FR-B1/B2 and NFR-4; it does not support any historical auto-promotion wording.</p>
+<p>5. <strong>DOC-06 is represented correctly and remains an implementation gap.</strong> Current pages repeat: “<strong>A new approval must bind to the exact proposal version the human reviewed. If that version changed, reject without approval effects and require refresh and review.</strong>” They also say the reviewed-version check is not implemented. This agrees with PRD UJ-2 and FR-B3.</p>
+<p>6. <strong>DOC-07 is represented correctly and remains unverified remotely.</strong> Current pages state: “<strong>Report Notion as synced only after confirmed remote delivery and read-back evidence for the intended destination and revision. Local outbox delivery alone is not remote synchronization.</strong>” This agrees with PRD UJ-5 and FR-D2.</p>
+<p>7. <strong>Evidence-state separation is aligned.</strong> The current Requirements page says: “<strong>Keep intended, specified, implemented, verified and released separate.</strong>” This directly agrees with PRD §§0, 2, 4, and 6. Notion&#x27;s dated checks, counts, and implementation claims therefore cannot promote the PRD or prove release readiness.</p>
+<p>8. <strong>The PRD correctly preserves unresolved product scope.</strong> Current private pages do not provide an approved buyer/commercial persona, numeric product SLOs, retrieval budgets, or a new approved visual reference. The PRD properly leaves those as owner decisions or non-adopted targets.</p>
+<h2>Conflicts, stale notes, and reconciliation consequences</h2>
+<h3>Current-page conflicts</h3>
+<p>No material conflict was found between the <strong>current top-level sections</strong> of the Hub, Engine, private Blueprint, private Risks page, and private Requirements page and the PRD&#x27;s authority, architecture, governance, DOC-06, or DOC-07 statements.</p>
+<h3>Preserved historical text that must not guide the PRD</h3>
+<p>1. <strong>Historical board/status authority conflicts with the current approved routing.</strong> The Engine&#x27;s preserved June snapshot says “<strong>Notion Work Board remains canonical for human/team status</strong>.” The current repository contract says operational status belongs to Allura and DOC-09 remains unresolved. The Engine labels the block “Historical snapshot — superseded working content — not current specification”; therefore it is stale evidence, not a contrary approval.</p>
+<p>2. <strong>Historical sync-direction claims conflict with DOC-01.</strong> Preserved Blueprint/Engine text says “<strong>Notion → repo only</strong>,” proposes a GitHub Action to push docs into Notion, and calls Notion a source of truth. Current pages explicitly supersede those tables and say no automatic overwrite or sync is established. The PRD correctly follows current DOC-01 rather than these historical instructions.</p>
+<p>3. <strong>Historical Neo4j and auto-promotion claims conflict with current canon.</strong> The preserved Blueprint, Risks, Requirements, and Finish Plan include dual-store, Neo4j, and threshold/<code>auto</code> promotion descriptions. Current pages mark them superseded; AD-50 and mandatory HITL govern. The PRD correctly excludes them.</p>
+<p>4. <strong>The Finish Plan is not current product or release status.</strong> Its page was last edited 2026-08-02 and includes May-era claims such as “Phase 1 ACTIVE,” port 3100, dashboard rebuild, Neo4j data sources, and Notion/Brain status receipts. These conflict with later architecture and authority decisions. Its useful surviving planning signal is only the direction to “<strong>Finish the Allura Memory System first… Defer new board work until the memory system is stable</strong>,” which is compatible with the PRD&#x27;s <code>Now/Next/Later</code> ordering but is not a current status receipt.</p>
+<p>5. <strong>The current Engine still carries mixed historical dashboard directions.</strong> Its preserved body includes AionUI, Control Center sunset, fork, and old board plans. The current Blueprint correctly says old Mission, AionUI, or AlluraBoard directions “<strong>do not choose a current design</strong>.” PRD FR-E1–E4 and DOC-02/09 gating are therefore safer than selecting any historical shell.</p>
+<p>6. <strong>Notion has not mirrored the 2026-10-20/22 development-readiness packet.</strong> The fetched current navigation pages focus on the 2026-10-18 repair and DOC-06/07. They do not enumerate proposed AD-65–68, DEV-AC01–12, RK-36–40, AD-69/RK-41, or the later backend/preview findings now present in canonical GitHub. Under DOC-01 this is planning/index lag, not a competing contract. The PRD correctly derives these requirements from the canonical repository, but Notion readers may miss them.</p>
+<p>7. <strong>Memory-write hold is active and does not alter product approval.</strong> The Engine&#x27;s 2026-10-21 header says: “<strong>Memory write hold remains active… proposal/approval lineage is unverified… Read-only audit views returned no matching entries; that does not prove underlying approval absence.</strong>” This supports the review&#x27;s no-Brain-write boundary and is an operational caution, not evidence that the PRD or any semantic record is approved.</p>
+<h2>Unresolved owner decisions</h2>
+<p>The Notion review does not close any of the following canonical owner decisions:</p>
+<ul>
+<li><strong>AD-65–68:</strong> capture replay/projection contract, vector workspace authority, governed correction/single-head concurrency, readiness/maintenance evidence and budgets. Status remains <strong>Proposed</strong> in <code>RISKS-AND-DECISIONS.md</code> dated 2026-10-20/22.</li>
+<li><strong>DOC-02:</strong> exact approved visual reference/revision/assets for the first UI story.</li>
+<li><strong>DOC-03:</strong> restore/rollback behavior versus immutable lineage.</li>
+<li><strong>DOC-05:</strong> canonical duplicate behavior across distinct approved proposals.</li>
+<li><strong>DOC-08:</strong> evidence for the curator-first route/delivery decision.</li>
+<li><strong>DOC-09:</strong> authoritative operational board, sync direction, and conflict rules. The approved routing—Allura status, Notion planning, Brain continuity—does not choose a native board/sync implementation.</li>
+<li><strong>ENT-01–05:</strong> workspace-specific roles/confidentiality, live restricted-role/RLS proof, complete administration/device/audit flows, production identity/session evidence, and responsive/accessibility evidence.</li>
+<li><strong>Metric/product budgets:</strong> retrieval quality, latency, scale, admission/retry/retention, and release thresholds.</li>
+<li><strong>Buyer/commercial persona and pricing/packaging:</strong> absent from the reviewed canonical/private planning set.</li>
+</ul>
+<p><strong>Owners preserved from the canonical decision record:</strong> Sabir owns product choices and approval boundaries; Brooks specifies architecture/boundaries; Woz implements after decisions; Pike/Knuth/Fowler/Hightower and other named lane owners supply independent security, data, quality, and deployment review/evidence. Assignment is not execution or approval.</p>
+<h2>Coverage gaps and limits</h2>
+<ul>
+<li>The <code>Allura Work Items</code> databases linked from the Engine were <strong>not queried</strong>. Their rows could provide planning context, but DOC-09 is unresolved and database status must not be treated as operational authority.</li>
+<li><code>Allura Projects</code> and <code>PRD: Team RAM — Real Actual Masters v1.0</code> were <strong>not fetched</strong> because they concern team/plugin delivery rather than the bounded Allura Memory product PRD. The Engine&#x27;s current header supplied the only directly relevant memory-write-hold note.</li>
+<li>Historical/recovery duplicates and archive descendants were not fetched after search and Hub lineage identified them as superseded.</li>
+<li>Comments, discussions, external GitHub PR checks, deployment targets, live databases, Brain records, and work-status systems were not inspected. No conclusion about current implementation, deployment, release, or operational status follows.</li>
+<li>The connector responses included complete-looking closing tags and no truncation notices, but did not expose an explicit truncation flag; inaccessible nested content cannot be ruled out.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>Notion planning supports the PRD&#x27;s core product contract and authority boundaries, with no current-page contradiction requiring a PRD rewrite.</strong> The PRD is still an <strong>unapproved authoring draft</strong>: Notion confirms the October 18 DOC-01/06/07 planning decisions and the October 21 memory-write hold, but does not approve the PRD, close the canonical owner decisions, establish operational status, or prove implementation/release. The main reconciliation action is to keep historical Notion bodies explicitly non-authoritative and surface the October 20–22 canonical readiness packet to future Notion readers without creating a second engineering specification.</p></div></details></section>
+<div class="mechanical"><h3>Rubric mechanical notes</h3><ul>
+<li><strong>low</strong> Assumptions Index does not roundtrip to inline assumption tags (§7, line 139) — The three indexed assumptions do not appear as <code>[ASSUMPTION: …]</code> tags at their first relevant locations, so the index cannot be mechanically checked against the body. <em>Fix:</em> either add matching inline tags at the relevant authority/audience/source-present statements or rename these entries as declared constraints if they are already canonical facts; keep a one-to-one index.</li>
+<li><strong>low</strong> One journey lacks a named protagonist (§1.2, line 44) — UJ-1 through UJ-4 identify a developer, reviewer, operator, or viewer; UJ-5 does not. <em>Fix:</em> apply the UJ-5 fix under Downstream usability.</li>
+<li><strong>medium</strong> Cross-reference resolution depends on an unstable line pointer and implicit namespace knowledge (§0, line 20; §3, lines 62–100) — Local IDs are continuous (<code>UJ-1</code>–<code>UJ-5</code>, <code>FR-A1</code>–<code>FR-F4</code> within feature groups, <code>NFR-1</code>–<code>NFR-8</code>), but canonical targets cannot all be resolved from this document. <em>Fix:</em> add the stable canonical source map and FR-to-AC traceability table described above.</li>
+<li>Glossary usage is materially consistent: “evidence,” “proposal,” “semantic version,” “governance receipt,” “delivery observation,” “authority,” “current knowledge,” and “source-present” retain their defined meanings across the requirements.</li>
+<li>Required shape elements are present for the agreed brownfield companion role. A dedicated Non-Goals section is optional here because explicit boundary, deferred-scope, and non-readiness statements already carry the omission burden.</li>
+</ul></div>
+<footer class="report-footer"><div class="meta"><span>Rubric: .agents/skills/bmad-prd/assets/prd-validation-checklist.md</span><span>Generated: 2026-10-25T04:21:22.951678+00:00</span><span>Artifacts: validation-report.html / validation-report.md / verification.json</span></div></footer></div></body></html>

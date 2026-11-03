@@ -1,0 +1,25 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css" source(none);
+@source "./studio-baseui";
+@source "./studio-adapters";
+@source "./studio-ecommerce-preview.tsx";
+@theme inline {
+ --color-background: var(--allura-cream);
+ --color-foreground: var(--allura-ink);
+ --color-card: var(--allura-cream);
+ --color-card-foreground: var(--allura-ink);
+ --color-primary: var(--allura-blue);
+ --color-primary-foreground: var(--allura-cream);
+ --color-secondary: var(--surface-blue-soft);
+ --color-secondary-foreground: var(--allura-blue);
+ --color-muted: var(--surface-quiet);
+ --color-muted-foreground: var(--surface-muted);
+ --color-border: var(--surface-border);
+ --color-ring: var(--allura-blue);
+ --color-input: var(--surface-control-border);
+ --color-destructive: var(--allura-ink);
+ --color-accent: var(--surface-blue-soft);
+ --color-accent-foreground: var(--allura-blue);
+ --font-sans: 'IBM Plex Sans', Arial, sans-serif;
+ --font-heading: 'Aeonik', 'IBM Plex Sans', Arial, sans-serif;
+}

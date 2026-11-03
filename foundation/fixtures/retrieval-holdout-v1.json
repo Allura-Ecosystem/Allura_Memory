@@ -1,0 +1,10 @@
+{
+  "version": "retrieval-holdout-v1",
+  "labelStatus": "delegated-engineering-fixture-not-independently-human-rated",
+  "cases": [
+    {"id":"heldout-pet","query":"Which pet purrs and belongs to the feline family?","expected":["cat"]},
+    {"id":"heldout-policy","query":"What badge colour is required at the Iris release gate?","expected":["current"]},
+    {"id":"heldout-no-answer","query":"Explain how sourdough starter consumes maltose.","expected":[]},
+    {"id":"heldout-foreign","query":"What is the secret quokka launch code?","expected":[]}
+  ]
+}

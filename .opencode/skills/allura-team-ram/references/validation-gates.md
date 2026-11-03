@@ -49,14 +49,15 @@
 - [ ] Implementation follows story spec
 - [ ] Tests written for acceptance criteria
 
-### Gate 5: Notion Board Update
+### Gate 5: Operational Status and Planning Documents
 
-**Purpose:** Keep the work board in sync with reality.
+**Purpose:** Keep Allura operational status truthful while preserving Notion's planning-document boundary.
 
 **Checklist:**
-- [ ] Work item status updated
-- [ ] Decision Log updated with evidence links
-- [ ] Handoff Context updated
+- [ ] Existing Allura work-item identity and status read through an actual supported capability
+- [ ] Authorized Allura status transition verified, or unavailable/unperformed state reported explicitly
+- [ ] Separately authorized Notion planning documents updated without treating them as operational status
+- [ ] Brain continuity and BMAD/local artifacts not used as substitute status authorities
 
 ### Gate 6: Validation Evidence
 
@@ -87,6 +88,6 @@
 | Gate 2 (Doc Impact) | Plan doc update in same PR. Do not skip. |
 | Gate 3 (Owner) | Assign owner before proceeding. Do not self-review. |
 | Gate 4 (Workflow) | Follow the Allura skill workflow. Do not improvise. |
-| Gate 5 (Notion) | Log warning. Continue with local status. Flag for manual update. |
+| Gate 5 (Status/Planning) | If no supported Allura status capability is available, report status unknown and any intended transition unperformed. Continue only work that does not depend on the transition; do not substitute Notion, Brain or local files. |
 | Gate 6 (Validation) | Do not mark story Done. Log blocker to Brain. |
 | Gate 7 (Brain) | Log warning. Continue. Flag for manual Brain update. |

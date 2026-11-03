@@ -1,0 +1,66 @@
+{
+  "verification_version": 1,
+  "generated_at": "2026-10-25T13:25:30Z",
+  "scope": "P01/G01 bounded local drafting and placement correction only",
+  "head_revision": "fcf4a33f025f69a5bc3fd120e974dd079dc65c52",
+  "branch": "dev/allura-beta",
+  "final_prd": {
+    "path": "_bmad-output/planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md",
+    "sha256": "b1fc7ca689dd165edd78a5d5854b14283b2492a4886b72f35d7eb2fc39370e73",
+    "status": "updated-draft-unapproved"
+  },
+  "p01": {
+    "old_link": "[PRD](../../planning-artifacts/prd.md)",
+    "new_link": "[PRD](../../planning-artifacts/prds/prd-Allura_Memory-2026-10-25/prd.md)",
+    "active_stale_links_after": [],
+    "story_count": 12,
+    "verification_method": "For each final story, replace the one new link with the old link in memory; the reconstructed bytes must hash to the captured before_sha256, while the unmodified final bytes must hash to after_sha256. Each story must contain zero old links and exactly one new link.",
+    "stories": [
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-00.md","before_sha256":"c85fe92c0a8e55e8ebbe6070cd5ad90744c4cae72fa54ae86602ba4089a7101f","after_sha256":"e59ba7c797a43b972ed95b5ba6bc6d46f87d18e28ab0c82b9ba93b7aee3652be","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-01.md","before_sha256":"873fd55652effcb5eb59bcfc7326c941739b8d27119f009a234cb25945d4f66d","after_sha256":"4e54bb715fa6ad273c63a5f177ed9b6bcca68cdc54bb72e8678b4ebcec5b4e01","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-02.md","before_sha256":"5df0718f11ba57959823c90073c4b1bd06054ef01a092bfe967b9705fddb8d72","after_sha256":"31dd5a8985cb597265b4d4b949a4da849deb7e5e60f893da672bfab6d75e3738","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-03.md","before_sha256":"7c37d55e82fc1295ed001f28f9c88bae9bc2b2e6fec5356d9a847f868c476d9c","after_sha256":"3f20103cc47cad5ca5497f5fa24aae059836a44fcd8adfed4f4b8fafaef2fae7","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-04.md","before_sha256":"02cef8929bc83b58697629127d7a04209872e69d11c565844786740bf593b008","after_sha256":"18f45393989ffcdd6feb649498929e8d1bb52d6091c40e0dfb36a587ffc560f9","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-05A.md","before_sha256":"b237417eac120273848b0bbe22e6cae0daa8501d87d47e085f71e673b268d5f1","after_sha256":"a046b832073794dcb28287acc595e7f9bd6a48b55441dd0f6b70c7011428b00a","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-05B.md","before_sha256":"55c8f50d79b77c14a357b14906cdb17ebd60d9c3edd7c62d2e148ca177458aea","after_sha256":"119bf767d7191d50ccd36e97b39a790538ba2fe2372e2d9c0da6d2e3f5795843","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-06.md","before_sha256":"4446807e3a9f215ed16be48393d94d03b101c32b684f0484d7f3bae07741612d","after_sha256":"cfe24eec84e9c3877876f5d48f7c922f86692d5a694eb4bb9417040f5eec13de","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-07.md","before_sha256":"b01a3b8687f565abd8afeeeda62f3903acd0dc6faff83e9b44f97aecfac0011c","after_sha256":"bb69fd6ff9ac4772d2995b22302f44b540aa2f2455ecd967d4fa8d6e4672a55a","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-08.md","before_sha256":"36295fd588bd6d7dcee75da3fd842271be99748a10724a0c2c44d7d5077b928e","after_sha256":"b641582f8972c1091a7539dd33b81c319be33fe3805feeedd0e6c537a78f8ab3","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-09.md","before_sha256":"42fa6201df7794544986a815034941726de78b639c1233d323982a11ad514ec4","after_sha256":"276689588a9b0188f227f9efd4060e49815d16024568726d15e0f3376787eac7","exact_link_replacement_only":true},
+      {"path":"_bmad-output/implementation-artifacts/stories/DEV-10.md","before_sha256":"e87c7bf20c1fe3195e0617844d7ec0be19c9e867bdeb75adfdf0079adc8abece","after_sha256":"4d94194d0759793e1992455146cb063e333014f3a07248854bf086fcfec0bd93","exact_link_replacement_only":true}
+    ]
+  },
+  "g01": {
+    "old_heading_absent": true,
+    "required_sections_present": [
+      "Product choices (not decided here)",
+      "Engineering proposals (not adopted here)",
+      "Evidence gaps and open contracts",
+      "Deferred strategy and budgets"
+    ],
+    "decisions_or_adoptions_recorded": false
+  },
+  "integrity": {
+    "protected_parent_attestation": {"file_count":3446,"changes":[],"source":"parent-verification.json"},
+    "live_hash_bound_protected_sources_checked": 10,
+    "live_hash_bound_protected_sources_changed": 0,
+    "frozen_review_files_checked": 9,
+    "frozen_review_files_changed": 0,
+    "historical_input_sha256": "b1db0967a7ae36f1dd1e65469d85794c7fb0507e29743545270bffa38828d9c7",
+    "fr_ids_preserved": true,
+    "fr_id_count": 24,
+    "missing_prd_local_links": []
+  },
+  "commands": [
+    {"command":"PATH=$HOME/.bun/bin:$PATH python3 /tmp/verify-allura-prd-update.py","exit_code":0,"result":"PASS: final PRD hash, 12 exact story replacements, no active stale links, 24 FR IDs, 10 protected-source hashes, 9 frozen review hashes, historical input, G01 headings, and PRD local links"},
+    {"command":"PATH=$HOME/.bun/bin:$PATH bash .github/scripts/docs-allura-canonical-guard.sh","exit_code":0,"result":"docs-allura-canonical-guard: OK"},
+    {"command":"PATH=$HOME/.bun/bin:$PATH bash .github/scripts/docs-backend-residue-guard.sh --docs-only","exit_code":0,"result":"docs-backend-residue-guard: OK"},
+    {"command":"PATH=$HOME/.bun/bin:$PATH bun scripts/validate-allura-bmad.ts","exit_code":0,"result":"Allura BMAD migration validation passed (220 checks); active contract references checked: 16"},
+    {"command":"PATH=$HOME/.bun/bin:$PATH bun scripts/validate-bmad-install.ts","exit_code":0,"result":"BMAD_INTEGRITY_OK version=6.12.4 skills=214 commands=29 runtime=18 custom=9"}
+  ],
+  "limitations": [
+    "The original /tmp verifier and its path-level 3,446-file baseline were not present in this execution environment. The verifier was reconstructed from the persisted parent-verification.json, source-manifest.json, frozen hashes, current artifacts, and captured story before hashes. It revalidates the preserved 3,446-file clean attestation and directly rehashes all 10 manifest-bound protected sources and all 9 frozen review files; it cannot independently replay the vanished path-level 3,446-file baseline.",
+    "No product test, live MCP, database, Notion, Brain, operational-status, commit, push, deployment, schema, API, or product-acceptance action was performed."
+  ],
+  "pass": true
+}

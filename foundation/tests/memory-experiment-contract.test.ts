@@ -1,0 +1,21 @@
+import {test,expect} from 'bun:test';
+import {parseSnapshot,snapshotDigest,experimentLimits} from '../src/memory-experiment-contract.ts';
+const scope={groupId:'allura-contract',workspaceId:'11111111-1111-4111-8111-111111111111'};
+const mid='22222222-2222-4222-8222-222222222222',kid='33333333-3333-4333-8333-333333333333',eid='44444444-4444-4444-8444-444444444444';
+const base=()=>({schema:'memory-experiment-base-v1',snapshotId:'fixture-1',scope:{...scope},records:[{scope:{...scope},memoryId:mid,knowledgeId:kid,version:'1',content:' Exact synthetic evidence. ',evidenceIds:[eid]}]});
+test('experiment contract preserves exact immutable scope version text and digest',()=>{
+ const input=base(),parsed=parseSnapshot(input,scope);expect(parsed.records[0]!.content).toBe(input.records[0]!.content);expect(Object.isFrozen(parsed)).toBe(true);expect(Object.isFrozen(parsed.scope)).toBe(true);expect(Object.isFrozen(parsed.records[0]!.evidenceIds)).toBe(true);input.records[0]!.content='changed';expect(parsed.records[0]!.content).toBe(' Exact synthetic evidence. ');expect(snapshotDigest(parsed)).toBe(snapshotDigest(parseSnapshot(base(),scope)));expect(Object.isFrozen(experimentLimits)).toBe(true);
+ const altered=base();altered.records[0]!.content+='x';expect(snapshotDigest(parseSnapshot(altered,scope))).not.toBe(snapshotDigest(parsed));
+ const reordered=base();reordered.records[0]!.evidenceIds.push('55555555-5555-4555-8555-555555555555');const orderedDigest=snapshotDigest(parseSnapshot(reordered,scope));reordered.records[0]!.evidenceIds.reverse();expect(snapshotDigest(parseSnapshot(reordered,scope))).toBe(orderedDigest);expect(parseSnapshot({...base(),records:[]},scope).records).toEqual([]);
+});
+test('experiment contract rejects foreign duplicate malformed and authority bearing data',()=>{
+ const foreign={...scope,groupId:'allura-other'};expect(()=>parseSnapshot(base(),foreign)).toThrow('not_found');expect(()=>parseSnapshot({...base(),approved:true},scope)).toThrow('invalid');const input=base();input.records[0]!.scope=foreign;expect(()=>parseSnapshot(input,scope)).toThrow('not_found');
+ for(const version of ['01','0','1.0','2147483647','1e2']){const value=base();value.records[0]!.version=version;expect(()=>parseSnapshot(value,scope)).toThrow('invalid');}
+ for(const content of ['', '\u0000', '\ud800']){const value=base();value.records[0]!.content=content;expect(()=>parseSnapshot(value,scope)).toThrow('invalid');}
+ const duplicated=base();duplicated.records.push({...duplicated.records[0]!});expect(()=>parseSnapshot(duplicated,scope)).toThrow('invalid');const duplicateEvidence=base();duplicateEvidence.records[0]!.evidenceIds.push(eid);expect(()=>parseSnapshot(duplicateEvidence,scope)).toThrow('invalid');
+ duplicated.records[1]!.memoryId='55555555-5555-4555-8555-555555555555';expect(()=>parseSnapshot(duplicated,scope)).toThrow('invalid');for(const memoryId of ['not-a-uuid','ABCDEF12-1234-4123-8123-123456789012']){const value=base();value.records[0]!.memoryId=memoryId;expect(()=>parseSnapshot(value,scope)).toThrow('invalid');}
+});
+test('experiment contract rejects accessors sparse arrays and finite budget excess',()=>{
+ let calls=0;const input=base();Object.defineProperty(input.records,'0',{enumerable:true,get:()=>{calls++;return base().records[0];}});expect(()=>parseSnapshot(input,scope)).toThrow('invalid');expect(calls).toBe(0);expect(()=>parseSnapshot({...base(),records:new Array(2)},scope)).toThrow('invalid');const content=base();content.records[0]!.content='x'.repeat(experimentLimits.contentBytes+1);expect(()=>parseSnapshot(content,scope)).toThrow('invalid');expect(()=>parseSnapshot({...base(),records:new Array(experimentLimits.records+1).fill(base().records[0])},scope)).toThrow('invalid');
+ const bytes=base();bytes.records=Array.from({length:12},(_,i)=>({...base().records[0]!,memoryId:`22222222-2222-4222-8222-${String(i).padStart(12,'0')}`,knowledgeId:`33333333-3333-4333-8333-${String(i).padStart(12,'0')}`,content:'x'.repeat(experimentLimits.contentBytes)}));expect(()=>parseSnapshot(bytes,scope)).toThrow('quota');content.records[0]!.content='x'.repeat(experimentLimits.contentBytes);expect(parseSnapshot(content,scope).records[0]!.content.length).toBe(experimentLimits.contentBytes);
+});

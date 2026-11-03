@@ -49,7 +49,7 @@ Load `allura-team-ram` skill. This provides:
 2. Search Allura Brain:
    - group_id: "allura-system"
    - query: "code review {topic} blockers decisions outcomes"
-3. Check Notion board for review status
+3. Read review status through an actual supported Allura capability; if unavailable, record status unknown. Consult Notion only for planning documents.
 4. Synthesize: what's active, what's blocking, what was decided
 ```
 
@@ -93,13 +93,13 @@ Execute code review with Allura context loaded:
    - 🟢 Suggestion (nice to have)
 4. Present actionable results with file:line references
 
-### Step 6: Notion Board Update (Gate 5)
+### Step 6: Operational Status and Planning Documents (Gate 5)
 
 After review:
 
-1. Follow shared Gate 5: verify the board/work-item identity and existing update authority.
-2. Attach actual findings and evidence within that scope; report missing access or approval.
-3. Done/Approved status moves and Notion sync retain their separate approval gates; do not equate local review with live board status.
+1. Follow shared Gate 5: verify the Allura work-item identity, current operational status and update authority through an actual supported capability.
+2. Attach actual findings and evidence within that scope; report missing access or approval. Update Notion only for separately authorized planning documents.
+3. Done/Approved status moves retain their separate approval gates; do not equate local review, Brain continuity, Notion planning or sprint YAML with live operational status.
 
 ### Step 7: Validation Evidence (Gate 6)
 

@@ -1,0 +1,17 @@
+{
+  "schema": "allura-dashboard-reference-v1",
+  "sourceHead": "103f5206a460b74bc88b1677c3dc457c8375f979",
+  "authority": "delegated-local-design-not-human-acceptance",
+  "sources": [
+    {"path":"artifacts/enterprise-dashboard/visual-fixture/preview-shell.tsx","sha256":"0478a254fdbb01e1868d6e34dd27f43de4268b671f5cdb3f86074b0b340d511c"},
+    {"path":"artifacts/enterprise-dashboard/visual-fixture/main.tsx","sha256":"31d66e70c52a5f1cb6672475e7036c16b77edf73ab24e066f23ead0050cdd896"},
+    {"path":"artifacts/enterprise-dashboard/visual-fixture/review-walkthrough.tsx","sha256":"cea3eccbd42379b66b244f09e4bfa34c09e14185034258d47819d8df838b8d08"},
+    {"path":"artifacts/enterprise-dashboard/visual-fixture/studio-brand.css","sha256":"67869ccd9ad05cf876e3177c3e661a11953647781aa8490b49e5c5b45634fd2f"},
+    {"path":"artifacts/enterprise-dashboard/visual-fixture/modern-experience.css","sha256":"38688cde475ea7e0648c466facb235e29c1c110c18be154f28fb45082cb1e162"},
+    {"path":"artifacts/enterprise-dashboard/screenshots/portfolio-refresh/desktop-memories.png","sha256":"9ba17086780b0341dc10c63c0730b7cce9fa00daca72ea47b95bad207b0a3c0c"},
+    {"path":"artifacts/enterprise-dashboard/screenshots/portfolio-refresh/desktop-graph.png","sha256":"5be00c7e0bb5159114997aaebc871885523b62529c3aea926e14adeaab2f3d28"},
+    {"path":"artifacts/enterprise-dashboard/screenshots/graph-list-phone.png","sha256":"f8dddf6a21580804bf32c85526dd0e614a175815da7e7a8a813dbd0dfc751f3d"},
+    {"path":"docs/design/command-center/operator-surface-contract.md","sha256":"f05bf91ed5fdd69ae56c82c0cfd4eaa67847f1f9f9f84d8dd1cea0b897692c13"},
+    {"path":"public/brand/allura-lettermark-al-figma.png","sha256":"3efad65702375e9eea2cd48586f3aae89d338720186e372ee50fa11d47262156"}
+  ]
+}

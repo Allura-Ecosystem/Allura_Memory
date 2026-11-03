@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-19T19:49:49.070853+00:00",
+  "scope": "HTML portfolio preview only; no backend or real Shopify connection",
+  "upstream": "https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui",
+  "revision": "62b1b3e3c4af7a1abf055298b01b4af020bd0f8b",
+  "html": "/home/ronin704/ChatGPT/Allura memory/output/Allura-dashboard-preview.html",
+  "sha256": "5e88cfe4dafb94344c0f24ea63acb74174bcf943999c3a6051374f722cb5e02d",
+  "changes": [
+    "Imported pinned Studio Base UI component source with MIT license and source/adapted hashes.",
+    "File Manager folder/grid/list compositions connected to shared Files and Work providers.",
+    "Kanban task/column/toolbar compositions adapted with Board/List/Table and search; guarded stage changes retained.",
+    "E-commerce KPI/sales/traffic/products/inventory source widgets, fictional fixed samples; separate from Shopify sample import flow.",
+    "Allura Cream/Ink/Blue/Orange/official AL assets retained; scoped generated utilities."
+  ],
+  "validation": {
+    "build": "passed",
+    "strict_types": "passed; focused preview entry and imported dependencies",
+    "lint": "passed with no warnings; import/no-unresolved excluded only for preview-local @studio alias",
+    "source_review": "Ready for bounded preview after Save name submit-type fix; chart provenance refreshed.",
+    "browser": [
+      "File Grid/List and team folder navigation",
+      "File rename submission and linked Work task opens",
+      "Task Table view and search by WORK-003",
+      "Task List view appears; Board search finds one handbook task",
+      "Unreviewed task Done rejected, selected stage remains To do",
+      "Reader stage control disabled and zero draggable cards",
+      "Store overview sample charts render",
+      "Phone390/tablet820 have document scrollWidth equal clientWidth",
+      "Phone chart labels spaced without overlap"
+    ],
+    "not_browser_tested": [
+      "Native drag gesture itself; handler reviewed to use same guarded moveTask.",
+      "Live authentication, authorization, storage, OAuth, Shopify API; not implemented."
+    ]
+  },
+  "screenshots": "/mnt/projects/git/Allura-Ecosystem/Allura_Memory/artifacts/enterprise-dashboard/screenshots/studio-baseui",
+  "brain": {
+    "search_group": "allura-system",
+    "trajectory": "29d9d66b-1933-4e66-ae40-05524669b4c3",
+    "write": "not attempted: exposed memory_add does not provide server idempotency key required by project; local receipt only"
+  },
+  "limitations": [
+    "Single-file preview uses fixed sample data, reload resets changes.",
+    "Existing People/Profiles/Teams/Roles retained; no claim those screens migrated to Base UI.",
+    "Source uses newer upstream APIs; no root dependency upgrade. Recharts chart type import adapted for installed v2."
+  ]
+}

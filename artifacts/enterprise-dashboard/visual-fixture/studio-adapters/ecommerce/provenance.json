@@ -1,0 +1,88 @@
+{
+  "upstream": "https://github.com/arhamkhnz/next-shadcn-admin-dashboard-baseui",
+  "adaptations": [
+    "Scoped UI imports; original widget composition retained",
+    "Fixed fictional dates and explicit sample labels",
+    "Removed SVG glow/gradient and decorative action arrows",
+    "Allura flat palette; no verified-state green",
+    "Inventory gauge label fits chart bounds; traffic uses ComposedChart for area and line",
+    "Revenue and profit share identical axis ranges",
+    "Removed unsupported Recharts 3 CartesianGrid yAxisId property for installed Recharts 2",
+    "Explicit monthly axis ticks with responsive minimum label spacing, avoiding phone overlap.",
+    "RecentOrders retains Studio Card/Table/ToggleGroup/Pagination composition with installed TanStack v8 useReactTable replacing upstream v9 useTable, plus local search, status filtering, numeric/date sorting, pagination and factual order details.",
+    "Removed inert upstream actions and external customer assets; no payment, refund, fulfillment, export or customer-contact action is implied.",
+    "All 34 upstream order rows preserve identifiers, customer names, amounts, item counts and statuses. Dates shift by one fixed interval from April 23\u2013May 9 to October 1\u201317, 2026. These are an explicitly disclosed illustrative subset, not the full monthly ledger.",
+    "Product details use known name, category and sales only. Shared numeric values derive the existing rounded shares; no SKU, individual stock count or order-product relationship is invented.",
+    "October sales comparison derives from plotted September and October values (+6.1%); profit bars use opaque Ink with visible legend and monthly value table.",
+    "Stable table renderers and explicit opener focus restoration retain keyboard position when opening and closing details.",
+    "Outer commerce grid uses its scoped responsive track rules without competing generated grid utilities, preventing implicit narrow tracks at tablet widths."
+  ],
+  "files": {
+    "kpi-strip.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/kpi-strip.tsx",
+      "vendored_source_sha256": "b93b970be2197455be1ef6a54eb329c2a5cd1eb3ecea07ce6ef94c401a877480",
+      "adapted_path": "studio-adapters/ecommerce/kpi-strip.tsx",
+      "adapted_sha256": "1823acd26edf08eee5e58a609e687fbae2c96680565b45756cc8611764532d88",
+      "historical_original_checkout_sha256": "0167b6495a3e730e4f572d04f50b2b0d003f55f2e41f7c42d9798ad185012957"
+    },
+    "inventory.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/inventory.tsx",
+      "vendored_source_sha256": "a3fad6f10a320fce2e70249cd3a180d98395997cbe3e507376d50502993b8195",
+      "adapted_path": "studio-adapters/ecommerce/inventory.tsx",
+      "adapted_sha256": "5889445bc4f9c661239a7e3946326c47df6cf48b0fbce33b0244005ec0047604",
+      "historical_original_checkout_sha256": "dea83122f68111cce43b44dce27688cf671a3b7859e66e1edcd87c0920fd406d"
+    },
+    "top-products.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/top-products.tsx",
+      "vendored_source_sha256": "bf8332add37a6fbce463f4b213efe56bedd46cfb6f8b4285865dcac54221de62",
+      "adapted_path": "studio-adapters/ecommerce/top-products.tsx",
+      "adapted_sha256": "b257afec8d762ab28373687acf63d72389e33d8f6954b115aba3b7a9b4596020",
+      "historical_original_checkout_sha256": "4161855a010573545a3a5c143341d4b15a427c02bc41cf038da3c5009c3f7cdd"
+    },
+    "store-traffic.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/store-traffic.tsx",
+      "vendored_source_sha256": "f35d1e50bc8953ea236b34f304052e605856fe44eb92c266096a548e4de13a72",
+      "adapted_path": "studio-adapters/ecommerce/store-traffic.tsx",
+      "adapted_sha256": "bccd80c6fdf44391afd476e17048a2d70a36266a89ea82dc155803d0f3ecbb75",
+      "historical_original_checkout_sha256": "0f795c728f6f8073839e3fb2bfc5e8562d18a8134fc378a1cf3b4ee224f5834c"
+    },
+    "recent-orders.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders.tsx",
+      "vendored_source_sha256": "18c6ca96fd4e85bb4b57284f397b68aea625fafad0e7103d262ac880da3da03b",
+      "adapted_path": "studio-adapters/ecommerce/recent-orders.tsx",
+      "adapted_sha256": "107dbf73005e6d2ab62d6d3dfe204860d065c2101aa40db04d8e9b3b1a660123"
+    },
+    "recent-orders-table/data.json": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/data.json",
+      "vendored_source_sha256": "ddfc3a5f8ade1f0085f2a0cbe8cbbd9dd560603b6557c5474043c3884cb826fb"
+    },
+    "recent-orders-table/schema.ts": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/schema.ts",
+      "vendored_source_sha256": "449999b7ea21ac6f91ca47a2836870fc2f90af2d80aadbddedc8e8cc3b0128fd"
+    },
+    "recent-orders-table/columns.tsx": {
+      "source": "studio-baseui/app/(main)/dashboard/ecommerce/_components/recent-orders-table/columns.tsx",
+      "vendored_source_sha256": "c2b9a4dca1651c108c02de523dceb7f7beca7ada3d0f4d13aa71026d36c7de64"
+    }
+  },
+  "revision": "62b1b3e3c4af7a1abf055298b01b4af020bd0f8b",
+  "source_note": "Hashes below identify the existing vendored source at the pinned revision, including its scoped import adjustments. Original checkout hashes are retained separately as historical provenance; no missing temporary checkout is needed.",
+  "allura_adaptations": {
+    "commerce-samples.ts": {
+      "path": "studio-adapters/ecommerce/commerce-samples.ts",
+      "sha256": "dda7e8638e2746ccb13b4d165608d54c20d4fb390eb8f9e6b8e8a2138b541489"
+    },
+    "commerce-samples.test.ts": {
+      "path": "studio-adapters/ecommerce/commerce-samples.test.ts",
+      "sha256": "cd5df853eb525ce95da56a632edb265ad4861689f9d9c47bb6ca96a78b9fc21b"
+    },
+    "studio-ecommerce-preview.tsx": {
+      "path": "studio-ecommerce-preview.tsx",
+      "sha256": "b29f61d6c644266ce43f6fbd20369677b25b2b57fc17579ada27a8d309da9a8e"
+    },
+    "studio-ecommerce.css": {
+      "path": "studio-ecommerce.css",
+      "sha256": "ff740a2cfd425293784797fe210a2b525295858feffba80aa15675eaba8ec91f"
+    }
+  }
+}

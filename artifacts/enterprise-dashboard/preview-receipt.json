@@ -1,0 +1,105 @@
+{
+  "scope": "HTML design preview only; user clarification2026-10-19",
+  "html": "/home/ronin704/ChatGPT/Allura memory/output/Allura-dashboard-preview.html",
+  "sha256": "185daed936eca58f04f88e78629a667b57cfc1f755243e4b5908cf082cf35872",
+  "build": "Vite build passed: 1646 modules; scripts, styles, fonts and official wordmark embedded",
+  "browser_checks": [
+    "PortableHTMLservedandloaded",
+    "Graphnodeinspection,zoom,fit,list",
+    "Memory\u2192embeddingnavigation",
+    "LocalViewer/Curator/Adminexamples",
+    "Localrolechangeandpolicytabs",
+    "Sampleproposal\u2192independentfictionalreviewer\u2192samplereceipt",
+    "Desktop1440/tablet820/phone390; no pagehorizontaloverflow",
+    "Phoneadministrationtable341px clientWidth=scrollWidth",
+    "Audit filters: HR + Failed produces 0 results and clears inspector",
+    "Denied sample target redacted; no restricted title or identifier",
+    "Operations recovery detail explicitly not verified; no live actions",
+    "Audit and operations responsive screenshots: desktop1440/tablet820/phone390; no horizontal document overflow",
+    "Security control creates/reuses linked work task; related control deep link works",
+    "Task creation, editing owner/title/due date, checklist, filters, reset and legacy kanban route work",
+    "Required review blocks Done; self-review blocked; separate fictional reviewer permits Done; edit clears prior review",
+    "Due date saves2026-11-09 and persists through navigation; reload resets sample state",
+    "Mobile menu opens, navigates and closes; selected task styling distinct from hover"
+  ],
+  "source_checks": "57focusedtests and TypeScriptpass for reused applicationcomponents/readwork; notlivebackendproof",
+  "security_claim": "None; no live permission enforcement claimed",
+  "screenshots": "/home/ronin704/ChatGPT/Allura memory/output/Allura-preview-screenshots.zip",
+  "remaining_for_production": "Fullenterprisecontracts remainopen; this deliveryisdesignonly",
+  "screenshot_count": 13,
+  "portable_checks": "No external script or stylesheet references; download and both served aliases have identical bytes",
+  "audit_operations_review": "Munari: Ready for HTML design preview; no blocking source or desktop/phone findings. No security, compliance or production approval.",
+  "positioning": "Portfolio project aiming toward SOC 2 readiness. No SOC 2 compliance or audit claim. User clarification2026-10-19.",
+  "positioning_verification": "Rendered portfolio banner and SOC 2 aspiration wording verified in final packaged preview on desktop, tablet and phone.",
+  "latest_delivery": "2026-10-20 Studio React ecommerce interactions; corrected tablet layout available in direct index build, portable repackaging blocked",
+  "current_preview_url": "http://127.0.0.1:4008/index.html#ecommerce",
+  "portable_packaging_status": "Blocked by missing Team RAM governance-preflight hook. SHA256 identifies portable build before final tablet grid fix; see studio-commerce-preview-receipt.json.",
+  "latest_source_checks": "Vite, strict TypeScript, three sample-integrity tests and focused ESLint passed",
+  "responsive_evidence": "screenshots/portfolio-refresh: desktop1440, tablet820, phone390; no horizontal page overflow in tested new views",
+  "security_trust_work_review": "Munari: Ready for portfolio design review. No remaining blocking source or desktop/tablet/phone findings. No security certification or production approval.",
+  "compact_logo_update": {
+    "date": "2026-10-19",
+    "request": "Use approved AL icon instead of full logo in preview navigation",
+    "asset": "public/brand/allura-lettermark-al-figma.png",
+    "authority": "docs/portfolio/brand/epic-25-operator-surface/DESIGN.authority.md",
+    "validation": "Build passed; desktop1440 and phone390 visually checked; portable HTML embeds unchanged icon asset",
+    "screenshots": [
+      "output/Allura-compact-icon-desktop.png",
+      "output/Allura-compact-icon-phone.png"
+    ]
+  },
+  "everyday_user_update": {
+    "date": "2026-10-19",
+    "scope": "HTML portfolio preview only",
+    "changes": [
+      "Six task-oriented navigation destinations",
+      "Home keyword search routes to document results",
+      "Company Knowledge visible in sidebar",
+      "Team selection filters documents; no results clears inspector",
+      "Search settings under Administration; embedding details in closed Advanced details for IT",
+      "Preview role controls collapsed; Reader/Editor/Administrator labels"
+    ],
+    "validation": [
+      "Vite build passed",
+      "Targeted ESLint passed",
+      "Home search for handbook returns two documents",
+      "No-match query clears details",
+      "Sales filter after cleared search returns Sales onboarding",
+      "Administration link reaches Search settings and advanced disclosure opens",
+      "Desktop1440 and phone390 screenshots; no horizontal phone overflow"
+    ],
+    "memory_trace": "Local receipt only; no Brain write claimed because no verified project-required idempotent write contract is available"
+  },
+  "apps_preview": {
+    "scope": "Local HTML portfolio demonstration; no real plugin runtime or upgrades",
+    "files": [
+      "visual-fixture/apps-preview.tsx",
+      "visual-fixture/apps-preview.css"
+    ],
+    "validation": [
+      "Vite build and targeted ESLint pass",
+      "Worker strict TypeScript pass",
+      "Mortgage missing-document receipt and versioned task handoff",
+      "Bumblebee evidence/draft/review task; revised draft creates fresh Pending task; prior reviewed snapshot unchanged",
+      "Admin reader controls disabled; compatible update and restore preserve case state; incompatible update blocked; failure retains old version; disabled app route unavailable while other app works",
+      "Desktop/tablet/phone visual review; no horizontal overflow in checked views"
+    ],
+    "screenshots": "screenshots/apps-preview",
+    "review": "Munari: Ready for bounded Apps portfolio preview; source snapshot and wording findings resolved. Root replaced cropped tablet evidence. No backend or security approval.",
+    "brain_persistence": "Not attempted: no verified server idempotency contract; no persistence claim"
+  },
+  "studio_baseui_extension": {
+    "receipt": "studio-baseui-preview-receipt.json",
+    "revision": "62b1b3e3c4af7a1abf055298b01b4af020bd0f8b",
+    "html_bytes": 2736138
+  },
+  "connections_3d": {
+    "receipt": "connections-3d-preview-receipt.json",
+    "html_bytes": 3692716
+  },
+  "react_force_graph": {
+    "receipt": "react-force-graph-preview-receipt.json",
+    "html_bytes": 4235978
+  },
+  "studio_commerce_receipt": "studio-commerce-preview-receipt.json"
+}

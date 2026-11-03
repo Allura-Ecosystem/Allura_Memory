@@ -52,7 +52,7 @@ Load `allura-team-ram` skill. This provides:
 2. Search Allura Brain:
    - group_id: "allura-system"
    - query: "{story topic} blockers decisions outcomes"
-3. Check Notion board for story status
+3. Read operational story status through an actual supported Allura capability; if unavailable, record status unknown. Consult Notion only for relevant planning documents.
 4. Synthesize: what's active, what's blocking, what was decided
 ```
 
@@ -97,13 +97,13 @@ Execute story implementation with Allura context loaded:
 4. Write tests for acceptance criteria
 5. Select and run the actual package-script test lane and `bun run typecheck`; verify nonzero discovery and report pass/fail/skip counts and exit codes. `bun test` is Bun’s native runner and is not the repository Vitest lane.
 
-### Step 6: Notion Board Update (Gate 5)
+### Step 6: Operational Status and Planning Documents (Gate 5)
 
 After implementation:
 
-1. Verify the actual board/work-item identity and current status; do not guess between similarly named boards.
-2. Within existing authorization, attach evidence and update the relevant handoff.
-3. Done/Approved transitions and Notion sync retain their separate approval gates. If access or authority is missing, report the exact pending update; local packets are not live board status.
+1. Verify the actual Allura work-item identity and current operational status through a supported capability; do not guess or infer it from Brain, Notion or local files.
+2. Within existing authorization, attach evidence and request the intended Allura status transition. Maintain related Notion planning documents only through separately authorized planning-document tools.
+3. Done/Approved transitions retain their separate approval gates. If the Allura status capability or authority is missing, report the intended transition as unperformed and status as unknown; local packets and Notion planning documents are not live operational status.
 
 ### Step 7: Validation Evidence (Gate 6)
 
@@ -148,7 +148,7 @@ production, configuration, tenant-transfer or semantic-promotion authority.
 |---------|----------|
 | Brain operation unavailable or pending | Report the observed operation/layer; continue independent local work without claiming successful hydration. |
 | Scout subagent unavailable | Perform Scout protocol manually. State: `Scout delegation unavailable; manual hydration.` |
-| Notion MCP unavailable | Log warning. Continue with local sprint status. Flag for manual update. |
+| Allura status capability unavailable | Report operational status unknown and the intended transition unperformed. Continue bounded independent work that does not depend on the transition; do not substitute Notion, Brain, or local sprint-status artifacts. |
 | Canonical doc impact detected | Plan doc update in same PR. Do not skip. |
 | Validation fails | Do not mark story Done. Log blocker to Brain. |
 

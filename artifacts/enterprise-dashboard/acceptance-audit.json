@@ -1,0 +1,158 @@
+{
+  "objective_source": "/home/ronin704/.codex/attachments/93d17ed7-4d3e-49ea-b3f1-f9ca7003c2e3/pasted-text-1.txt",
+  "objective_sha256": "769d19928c1def093a4510f59f9a40a2c44cab82e5379d408f95cf2307c18faf",
+  "baseline_revision": "28d90e84364d1f99e67df4f8a4ebdaafb6fcf0d9",
+  "status": "preview_scope_delivered_full_enterprise_unverified",
+  "scope_note": "User explicitly resolved scope: Keep this task preview-only. Enterprise requirements remain unverified and are not this delivery acceptance criteria.",
+  "requirements": [
+    {
+      "id": "organization",
+      "requirement": "100-person HR/Marketing/IT/Sales/shared workspace flows",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "identity",
+      "requirement": "Enterprise sign-in, verified workspace, effective permissions, MFA/session/revocation evidence",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "isolation",
+      "requirement": "Server-authorized search/detail/graph/embedding/count/export/cache/answer isolation",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "overview",
+      "requirement": "Verified scoped overview and actionable status",
+      "status": "partial_implementation_and_preview_validation",
+      "evidence": [
+        "Source changes and focused unit tests; labeled synthetic preview only; full requirement not accepted."
+      ]
+    },
+    {
+      "id": "memories",
+      "requirement": "Bounded searchable/filterable/paginated memories, saved views, ownership/version/provenance",
+      "status": "partial_implementation_and_preview_validation",
+      "evidence": [
+        "Source changes and focused unit tests; labeled synthetic preview only; full requirement not accepted."
+      ]
+    },
+    {
+      "id": "graph",
+      "requirement": "Real node-edge canvas, scoped actual relationships, zoom/pan/fit/neighborhood/inspector",
+      "status": "partial_implementation_and_preview_validation",
+      "evidence": [
+        "Source changes and focused unit tests; labeled synthetic preview only; full requirement not accepted."
+      ]
+    },
+    {
+      "id": "embeddings",
+      "requirement": "Verified metadata/index state/coverage; explicit unknowns",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "review",
+      "requirement": "Submit proposal, independent human decision, immutable audit receipt",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "devices",
+      "requirement": "Actual authorized inventory and honest connection/expiry/activity; gated enrollment/revocation",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "administration",
+      "requirement": "People/teams/membership/roles/policies with content access separate from org administration",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "audit",
+      "requirement": "Scoped audit and operational failures/recovery status",
+      "status": "design_preview_verified_live_requirement_unverified",
+      "evidence": [
+        "visual-fixture/audit-operations.tsx: local fictional events only",
+        "preview-final/audit-*.png and operations-*.png; filters, redaction, empty inspector and responsive checks",
+        "Munari independent preview review: no blocking findings; no live audit or recovery verification"
+      ]
+    },
+    {
+      "id": "responsive",
+      "requirement": "Desktop/tablet/phone, keyboard/contrast/focus/touch and list alternative",
+      "status": "partial_implementation_and_preview_validation",
+      "evidence": [
+        "Source changes and focused unit tests; labeled synthetic preview only; full requirement not accepted."
+      ]
+    },
+    {
+      "id": "branding",
+      "requirement": "Official mark; Cream-dominant semantic palette and flat Allura design",
+      "status": "partial_implementation_and_preview_validation",
+      "evidence": [
+        "Source changes and focused unit tests; labeled synthetic preview only; full requirement not accepted."
+      ]
+    },
+    {
+      "id": "security",
+      "requirement": "Secrets/transport/storage/rate limits/audit/revocation/recovery verified",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "proof",
+      "requirement": "HR/Sales/shared isolated identities; allow/deny tests; independent engineering+Durham reviews; requested screenshots",
+      "status": "unverified",
+      "evidence": []
+    },
+    {
+      "id": "governance",
+      "requirement": "Six owning docs aligned; append-only events; immutable versions; HITL; no unauthorized external/config/grant changes",
+      "status": "unverified",
+      "evidence": []
+    }
+  ],
+  "latest_user_scope": "2026-10-19: User clarified this delivery is an HTML design preview, not live enterprise implementation. No sign-in is required. Full enterprise requirements below remain unreleased and are not claimed by preview evidence.",
+  "local_validation": {
+    "date": "2026-10-19",
+    "tests": "57/57 focused tests passed:32 read service,6 pages,8 route parity,11 graph interactions",
+    "typecheck": "passed",
+    "documentation_guards": "canonical six + backend residue passed",
+    "engineering_review": "Pike bounded read-layer review: no remaining actionable findings; live SQL/RLS not tested",
+    "visual_review": "Munari: Ready for design preview; original screens plus new Audit & Operations source and desktop/phone screenshots reviewed. No security or production approval.",
+    "release": "none",
+    "brain_persistence": "not attempted; no verified idempotent write contract receipt"
+  },
+  "continuation_audit": {
+    "previous_turn": "progress: added and independently reviewed Audit & Operations HTML preview, with responsive evidence",
+    "current_action": "Compared saved full brief, current preview source, six-document evidence sections and approval route; verified delivered HTML digest and screenshot archive integrity.",
+    "result": "Full enterprise goal not complete. Preview contains fictional identities/data and no backend permission enforcement. Live isolation, provider settings, reviewed-version binding and operations evidence remain open.",
+    "authoritative_sources": [
+      "docs/allura/RISKS-AND-DECISIONS.md: ENT-01 through ENT-05",
+      "docs/allura/SOLUTION-ARCHITECTURE.md: enterprise dashboard read boundary",
+      "src/app/api/curator/approve/route.ts: no reviewed-version input forwarded on approval",
+      "artifacts/enterprise-dashboard/visual-fixture/main.tsx: local fictional roles, records and simulated review",
+      "artifacts/enterprise-dashboard/preview-receipt.json: hash and28image archive verified"
+    ],
+    "scope_resolution": {
+      "status": "resolved by user",
+      "answer": "Keep this task preview-only",
+      "date": "2026-10-19"
+    },
+    "changes_this_turn": "Evidence record only; no backend/auth/configuration/credential changes."
+  },
+  "preview_delivery": {
+    "scope": "Portfolio HTML only",
+    "features": [
+      "Security & Trust",
+      "Functional local Work Board",
+      "Warm Cream shared shell"
+    ],
+    "evidence": "preview-receipt.json",
+    "production_release": false
+  }
+}

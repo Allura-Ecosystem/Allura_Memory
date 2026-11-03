@@ -1,8 +1,0 @@
-{
-  "level": "warn",
-  "event": "device-pairing-denied",
-  "message": "Device challenge could not be issued",
-  "context": {
-    "device_id": "device-fixture-safe"
-  }
-}
