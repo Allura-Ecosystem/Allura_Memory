@@ -1,0 +1,1366 @@
+--- a/src/app/api/settings/route.ts
++++ b/src/app/api/settings/route.ts
+@@ -66,7 +66,17 @@
+       throw error
+     }
+ 
+-    const outcome: SourceOutcome<SettingsSnapshot> = await readSettings(validatedGroupId)
++    if (validatedGroupId !== roleCheck.user.groupId) {
++      return NextResponse.json({ error: "group_id is outside the authenticated tenant" }, { status: 403 })
++    }
++    if (!roleCheck.user.workspaceId) {
++      return NextResponse.json({ error: "authenticated workspace binding is required" }, { status: 403 })
++    }
++
++    const outcome: SourceOutcome<SettingsSnapshot> = await readSettings(validatedGroupId, {
++      workspaceId: roleCheck.user.workspaceId,
++      principalId: roleCheck.user.id,
++    })
+     const now = Date.now()
+ 
+     // Map SourceOutcome to HTTP response
+--- a/src/lib/brain-client.ts
++++ b/src/lib/brain-client.ts
+@@ -25,7 +25,7 @@
+ export interface BrainHealthReport {
+   subsystems: {
+     postgres: BrainHealthSubsystem
+-    neo4j: BrainHealthSubsystem
++    graph: BrainHealthSubsystem
+     embedding_backfill: BrainHealthSubsystem
+     curator_queue: BrainHealthSubsystem
+     mcp_tools: BrainHealthSubsystem
+--- a/src/lib/graph-adapter/index.ts
++++ b/src/lib/graph-adapter/index.ts
+@@ -11,6 +11,7 @@
+   GraphSearchResult,
+   DuplicateCheckResult,
+   VersionLookupResult,
++  GraphVersioningStatus,
+   CanonicalCheckResult,
+   CountResult,
+   GraphListResult,
+--- a/src/lib/graph-adapter/ruvector-adapter.ts
++++ b/src/lib/graph-adapter/ruvector-adapter.ts
+@@ -34,6 +34,7 @@
+   GraphSupersedesResult,
+   IGraphAdapter,
+   VersionLookupResult,
++  GraphVersioningStatus,
+ } from "./types"
+ import { GraphAdapterError } from "./types"
+ import { withTenantTransaction, withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
+@@ -482,6 +483,31 @@
+     }
+   }
+ 
++  async getVersioningStatus(params: {
++    group_id: GroupId
++    workspace_id: string
++    principal_id: string
++  }): Promise<GraphVersioningStatus> {
++    try {
++      const scope = requireWorkspaceScope(params)
++      return await withWorkspaceTransaction(
++        { tenantId: params.group_id, ...scope },
++        async (db) => {
++          const result = await db.query<{ count: string }>(
++            `SELECT COUNT(*) AS count
++             FROM graph_supersedes
++             WHERE group_id = $1 AND workspace_id = $2
++               AND workspace_scope_state = 'workspace_scoped'`,
++            [params.group_id, scope.workspaceId],
++          )
++          return { supersedesCount: parseInt(result.rows[0]?.count ?? "0", 10) }
++        },
++      )
++    } catch (error) {
++      throw new GraphAdapterError("ruvector-graph", "getVersioningStatus", "Versioning audit failed", error instanceof Error ? error : undefined)
++    }
++  }
++
+   async exportMemories(params: {
+     group_id: GroupId
+     user_id: string | null
+--- a/src/lib/graph-adapter/ruvector-crate-adapter.ts
++++ b/src/lib/graph-adapter/ruvector-crate-adapter.ts
+@@ -77,6 +77,7 @@
+   GraphSupersedesResult,
+   IGraphAdapter,
+   VersionLookupResult,
++  GraphVersioningStatus,
+ } from "./types"
+ import { GraphAdapterError, GraphAdapterUnavailableError } from "./types"
+ 
+@@ -434,6 +435,17 @@
+     return node ? { version: node.version, exists: true } : { version: null, exists: false }
+   }
+ 
++  async getVersioningStatus(_params: {
++    group_id: GroupId
++    workspace_id: string
++    principal_id: string
++  }): Promise<GraphVersioningStatus> {
++    return RuvectorCrateGraphAdapter.unsupported(
++      "getVersioningStatus",
++      "native ruvector-crate does not implement append-only SUPERSEDES versioning",
++    )
++  }
++
+   async exportMemories(params: {
+     group_id: GroupId
+     user_id: string | null
+--- a/src/lib/graph-adapter/types.ts
++++ b/src/lib/graph-adapter/types.ts
+@@ -97,6 +97,11 @@
+   exists: boolean
+ }
+ 
++/** Read-only workspace-scoped evidence for the append-only version graph. */
++export interface GraphVersioningStatus {
++  supersedesCount: number
++}
++
+ /**
+  * Result of a canonical check (used by memory_promote).
+  */
+@@ -357,6 +362,13 @@
+    */
+   getVersion(params: { id: MemoryId; group_id: GroupId }): Promise<VersionLookupResult>
+ 
++  /** Audit the active backend's workspace-scoped SUPERSEDES records. */
++  getVersioningStatus(params: {
++    group_id: GroupId
++    workspace_id: string
++    principal_id: string
++  }): Promise<GraphVersioningStatus>
++
+   /**
+    * Export canonical (non-superseded, non-deprecated) memories.
+    * Used by: memory_export
+--- a/src/lib/memory/canonical-contracts.ts
++++ b/src/lib/memory/canonical-contracts.ts
+@@ -981,7 +981,7 @@
+ export interface AuditHealthReportResponse {
+   subsystems: {
+     postgres: AuditSubsystemStatus
+-    neo4j: AuditSubsystemStatus
++    graph: AuditSubsystemStatus
+     embedding_backfill: AuditSubsystemStatus
+     curator_queue: AuditSubsystemStatus & { pending_count?: number }
+     mcp_tools: AuditSubsystemStatus & { tool_count?: number }
+--- a/src/lib/operational-state/sources/settings-source.ts
++++ b/src/lib/operational-state/sources/settings-source.ts
+@@ -18,8 +18,8 @@
+   throw new Error("settings-source is server-side only")
+ }
+ 
+-import { getPool } from "@/lib/postgres/connection"
+ import { audit_health_report } from "@/mcp/audit-tools"
++import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
+ import { validateGroupId } from "@/mcp/canonical-tools/validation-utils"
+ import { isConnectionError } from "../utils/error-classifier"
+ import type { SourceOutcome } from "../index"
+@@ -31,7 +31,7 @@
+   /** Health of each subsystem from MCP health report */
+   subsystemHealth: {
+     postgres: SubsystemHealth
+-    neo4j: SubsystemHealth
++    graph: SubsystemHealth
+     embeddingBackfill: SubsystemHealth
+     curatorQueueDepth: SubsystemHealth
+     mcpToolAvailability: SubsystemHealth
+@@ -65,18 +65,13 @@
+  */
+ export async function readSettings(
+   groupId: string,
++  context: { workspaceId: string; principalId: string },
+ ): Promise<SourceOutcome<SettingsSnapshot>> {
+-  let pool: ReturnType<typeof getPool>
+-  try {
+-    pool = getPool()
+-  } catch {
+-    // Cannot even construct a pool (missing config): degraded.
+-    return null
+-  }
+-
+   try {
+     // ── Postgres: governance policy/gate activity ──────────────────────────
+-    const pgResult = await pool.query<{
++    const pgResult = await withWorkspaceTransaction(
++      { tenantId: groupId, workspaceId: context.workspaceId, principalId: context.principalId },
++      (db) => db.query<{
+       policy_changes: string
+       gate_checks_24h: string
+       last_policy_change_at: string | Date | null
+@@ -86,8 +81,9 @@
+          COUNT(*) FILTER (WHERE event_type = 'governance_gate_checked' AND created_at > NOW() - INTERVAL '24 hours') AS gate_checks_24h,
+          MAX(created_at) FILTER (WHERE event_type = 'governance_policy_updated') AS last_policy_change_at
+        FROM events
+-       WHERE group_id = $1`,
+-      [groupId],
++       WHERE group_id = $1 AND workspace_id = $2`,
++      [groupId, context.workspaceId],
++      ),
+     )
+ 
+     const row = pgResult.rows[0] ?? {
+@@ -106,7 +102,7 @@
+     // ── MCP health report: subsystem status ───────────────────────────────
+     let subsystemHealth: SettingsSnapshot["subsystemHealth"] = {
+       postgres: "unknown",
+-      neo4j: "unknown",
++      graph: "unknown",
+       embeddingBackfill: "unknown",
+       curatorQueueDepth: "unknown",
+       mcpToolAvailability: "unknown",
+@@ -114,10 +110,10 @@
+ 
+     try {
+       const validatedGroupId = validateGroupId(groupId)
+-      const healthReport = await audit_health_report({ group_id: validatedGroupId })
++      const healthReport = await audit_health_report({ group_id: validatedGroupId }, context)
+       subsystemHealth = {
+         postgres: mapSubsystemStatus(healthReport.subsystems.postgres.status),
+-        neo4j: mapSubsystemStatus(healthReport.subsystems.neo4j.status),
++        graph: mapSubsystemStatus(healthReport.subsystems.graph.status),
+         embeddingBackfill: mapSubsystemStatus(
+           healthReport.subsystems.embedding_backfill.status,
+         ),
+--- a/src/mcp/audit-tools.ts
++++ b/src/mcp/audit-tools.ts
+@@ -1,17 +1,4 @@
+-/**
+- * Audit MCP Tool Handlers (Story 9.2)
+- *
+- * Implements 4 audit tools for the canonical Allura Brain MCP server:
+- * 1. audit_query_events     — paginated event query with filters
+- * 2. audit_health_report    — per-subsystem health status
+- * 3. audit_agent_activity   — agent-scoped event query
+- * 4. audit_invariant_check  — 7-invariant live compliance check
+- *
+- * ALL READS ONLY — no INSERT/UPDATE/DELETE on events table.
+- * group_id enforced on every query via validateGroupId.
+- * Parameterized SQL only ($1, $2 syntax).
+- */
+-
++/** Read-only, authenticated workspace-scoped audit MCP handlers. */
+ if (typeof window !== "undefined") throw new Error("server-side only")
+ 
+ import { classifyPostgresError, DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
+@@ -24,130 +11,107 @@
+   AuditInvariantCheckResponse,
+   AuditQueryEventsRequest,
+   AuditQueryEventsResponse,
++  GroupId,
+ } from "@/lib/memory/canonical-contracts"
+-import { baseMeta, degradedMeta } from "./canonical-tools/validation-utils"
++import type { PrincipalContext } from "@/lib/auth/principal-context"
++import { withWorkspaceTransaction } from "@/lib/db/tenant-transaction"
++import { createGraphAdapter, getGraphBackend } from "@/lib/graph-adapter"
++import { baseMeta, degradedMeta, validateGroupId } from "./canonical-tools/validation-utils"
+ import { getConnections } from "./canonical-tools/connection"
+-import { validateGroupId } from "./canonical-tools/validation-utils"
+ import { withCircuitBreaker } from "./canonical-tools/budget-circuit"
+ 
+-// Static count of MCP tools registered in the gateway (5 memory + 5 governance + 4 audit).
+-// UPDATE THIS when adding new tools to the ListToolsRequestSchema handler in canonical-http-gateway.ts.
+-const MCP_TOOL_COUNT = 14
+-
+-// Deprecated namespace prefix — stored as a variable so the governance
+-// hook does not mistake this detection query for an actual use of the namespace.
+ const DEPRECATED_NS_PREFIX = ["ronin", "claw"].join("")
+ 
+-// ── 1. audit_query_events ────────────────────────────────────────────────────
+-
+-/**
+- * Query the events table with optional filters and pagination.
+- * Returns events ordered by created_at DESC.
+- * Read-only — no DB writes.
+- */
++export interface AuditToolContext {
++  workspaceId: string
++  principalId: string
++  /** Supplied by the authenticated gateway's actual tools/list registry. */
++  registeredToolCount?: number
++}
++
++/** Project only authenticated authority; tool arguments can never select a workspace. */
++export function auditToolContextFromPrincipal(
++  principal: Pick<PrincipalContext, "workspaceId" | "principalId">,
++): AuditToolContext {
++  const workspaceId = String(principal.workspaceId ?? "").trim()
++  const principalId = String(principal.principalId ?? "").trim()
++  if (!workspaceId) throw new Error("authenticated principal has no verified workspace binding")
++  if (!principalId) throw new Error("authenticated principal id is required")
++  return { workspaceId, principalId }
++}
++
++function requireAuditScope(groupId: GroupId, context?: AuditToolContext) {
++  const workspaceId = String(context?.workspaceId ?? "").trim()
++  const principalId = String(context?.principalId ?? "").trim()
++  if (!workspaceId || !principalId) {
++    throw new Error("verified workspace_id and principal_id are required for audit access")
++  }
++  return { tenantId: groupId, workspaceId, principalId }
++}
++
++async function scopedQuery<T extends import("pg").QueryResultRow>(
++  groupId: GroupId,
++  context: AuditToolContext,
++  operation: string,
++  sql: string,
++  params: unknown[] = [],
++): Promise<import("pg").QueryResult<T>> {
++  const scope = requireAuditScope(groupId, context)
++  return withCircuitBreaker("postgres", groupId, operation, () =>
++    withWorkspaceTransaction(scope, (db) => db.query<T>(sql, params)),
++  )
++}
++
++function mapEvent(row: {
++  id: string; event_type: string; agent_id: string | null; status: string
++  metadata: Record<string, unknown>; created_at: string | Date
++}) {
++  return {
++    id: row.id,
++    event_type: row.event_type,
++    agent_id: row.agent_id,
++    status: row.status,
++    metadata: row.metadata ?? {},
++    created_at: typeof row.created_at === "string" ? row.created_at : row.created_at.toISOString(),
++  }
++}
++
+ export async function audit_query_events(
+-  request: AuditQueryEventsRequest
++  request: AuditQueryEventsRequest,
++  context: AuditToolContext,
+ ): Promise<AuditQueryEventsResponse> {
+   const groupId = validateGroupId(request.group_id)
++  const scope = requireAuditScope(groupId, context)
+   const limit = Math.min(Math.max(1, request.limit ?? 50), 200)
+   const offset = Math.max(0, request.offset ?? 0)
+-
+-  try {
+-    const { pg } = await getConnections()
+-
+-    // Build parameterized WHERE clauses
+-    const conditions: string[] = ["group_id = $1"]
+-    const params: unknown[] = [groupId]
+-    let paramIdx = 2
+-
+-    if (request.agent_id) {
+-      conditions.push(`agent_id = $${paramIdx}`)
+-      params.push(request.agent_id)
+-      paramIdx++
+-    }
+-
+-    if (request.event_type) {
+-      conditions.push(`event_type = $${paramIdx}`)
+-      params.push(request.event_type)
+-      paramIdx++
+-    }
+-
+-    if (request.date_range?.from) {
+-      conditions.push(`created_at >= $${paramIdx}`)
+-      params.push(request.date_range.from)
+-      paramIdx++
+-    }
+-
+-    if (request.date_range?.to) {
+-      conditions.push(`created_at <= $${paramIdx}`)
+-      params.push(request.date_range.to)
+-      paramIdx++
+-    }
+-
+-    if (request.source) {
+-      // source lives in metadata->>'source', not a top-level column
+-      conditions.push(`metadata->>'source' = $${paramIdx}`)
+-      params.push(request.source)
+-      paramIdx++
+-    }
+-
+-    const whereClause = conditions.join(" AND ")
+-
+-    const countResult = await withCircuitBreaker(
+-      "postgres",
+-      groupId,
+-      "audit_query_events:count",
+-      async () =>
+-        pg.query<{ total: string }>(
+-          `SELECT COUNT(*) AS total FROM events WHERE ${whereClause}`,
+-          params
+-        )
+-    )
+-
+-    const total = parseInt(countResult.rows[0]?.total ?? "0", 10)
+-
+-    const rowsResult = await withCircuitBreaker(
+-      "postgres",
+-      groupId,
+-      "audit_query_events:fetch",
+-      async () =>
+-        pg.query<{
+-          id: string
+-          event_type: string
+-          agent_id: string | null
+-          status: string
+-          metadata: Record<string, unknown>
+-          created_at: string
+-        }>(
+-          `SELECT id::text, event_type, agent_id, status, metadata, created_at
+-           FROM events
+-           WHERE ${whereClause}
+-           ORDER BY created_at DESC
+-           LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+-          [...params, limit, offset]
+-        )
+-    )
+-
+-    const events = rowsResult.rows.map((row) => ({
+-      id: row.id,
+-      event_type: row.event_type,
+-      agent_id: row.agent_id,
+-      status: row.status,
+-      metadata: row.metadata ?? {},
+-      created_at: typeof row.created_at === "string" ? row.created_at : new Date(row.created_at).toISOString(),
+-    }))
+-
++  const conditions = ["group_id = $1", "workspace_id = $2"]
++  const params: unknown[] = [groupId, scope.workspaceId]
++  let idx = 3
++  if (request.agent_id) { conditions.push(`agent_id = $${idx++}`); params.push(request.agent_id) }
++  if (request.event_type) { conditions.push(`event_type = $${idx++}`); params.push(request.event_type) }
++  if (request.date_range?.from) { conditions.push(`created_at >= $${idx++}`); params.push(request.date_range.from) }
++  if (request.date_range?.to) { conditions.push(`created_at <= $${idx++}`); params.push(request.date_range.to) }
++  if (request.source) { conditions.push(`metadata->>'source' = $${idx++}`); params.push(request.source) }
++  const where = conditions.join(" AND ")
++
++  try {
++    const [countResult, rowsResult] = await Promise.all([
++      scopedQuery<{ total: string }>(groupId, context, "audit_query_events:count",
++        `SELECT COUNT(*) AS total FROM events WHERE ${where}`, params),
++      scopedQuery<{ id: string; event_type: string; agent_id: string | null; status: string; metadata: Record<string, unknown>; created_at: string | Date }>(
++        groupId, context, "audit_query_events:fetch",
++        `SELECT id::text,event_type,agent_id,status,metadata,created_at FROM events
++         WHERE ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
++        [...params, limit, offset],
++      ),
++    ])
+     return {
+-      events,
+-      total,
+-      limit,
+-      offset,
+-      meta: baseMeta(["postgres"]),
+-    }
+-  } catch (error) {
+-    if (error instanceof DatabaseUnavailableError || error instanceof DatabaseQueryError) {
+-      throw error
+-    }
++      events: rowsResult.rows.map(mapEvent),
++      total: parseInt(countResult.rows[0]?.total ?? "0", 10),
++      limit, offset, meta: baseMeta(["postgres"]),
++    }
++  } catch (error) {
++    if (error instanceof DatabaseUnavailableError || error instanceof DatabaseQueryError) throw error
+     if (error instanceof Error && (error as Error & { code?: string }).code) {
+       throw classifyPostgresError(error, "audit_query_events", "SELECT events")
+     }
+@@ -155,660 +119,172 @@
+   }
+ }
+ 
+-// ── 2. audit_health_report ───────────────────────────────────────────────────
+-
+-/**
+- * Check all subsystem health statuses and return a structured report.
+- * PostgreSQL is required; Neo4j and other subsystems are optional (degraded OK).
+- */
+ export async function audit_health_report(
+-  request: AuditHealthReportRequest
++  request: AuditHealthReportRequest,
++  context: AuditToolContext,
+ ): Promise<AuditHealthReportResponse> {
+   const groupId = validateGroupId(request.group_id)
++  const scope = requireAuditScope(groupId, context)
+   const checkedAt = new Date().toISOString()
+-
+-  // ── PostgreSQL check ─────────────────────────────────────────────────────
+   let pgStatus: AuditHealthReportResponse["subsystems"]["postgres"]
+   let pgAvailable = false
+-  let pgInstance: Awaited<ReturnType<typeof getConnections>>["pg"] | null = null
++  let graphStatus: AuditHealthReportResponse["subsystems"]["graph"]
++
++  try {
++    const start = Date.now()
++    await scopedQuery(groupId, context, "audit_health_report:pg_check", "SELECT 1")
++    pgStatus = { status: "healthy", latency_ms: Date.now() - start }
++    pgAvailable = true
++  } catch (error) {
++    pgStatus = { status: "unavailable", latency_ms: 0, detail: error instanceof Error ? error.message : String(error) }
++  }
+ 
+   try {
+     const start = Date.now()
+     const { pg } = await getConnections()
+-    pgInstance = pg
+-    await withCircuitBreaker("postgres", groupId, "audit_health_report:pg_check", async () =>
+-      pg.query("SELECT 1")
+-    )
+-    pgStatus = {
+-      status: "healthy",
+-      latency_ms: Date.now() - start,
+-    }
+-    pgAvailable = true
+-  } catch (err) {
+-    pgStatus = {
+-      status: "unavailable",
+-      latency_ms: 0,
+-      detail: err instanceof Error ? err.message : String(err),
+-    }
+-  }
+-
+-  // ── Neo4j check ──────────────────────────────────────────────────────────
+-  let neo4jStatus: AuditHealthReportResponse["subsystems"]["neo4j"]
+-
+-  try {
+-    const start = Date.now()
+-    const { neo4j } = await getConnections()
+-    if (!neo4j) {
+-      neo4jStatus = {
+-        status: "degraded",
+-        latency_ms: 0,
+-        detail: "Neo4j disabled (GRAPH_BACKEND=ruvector)",
+-      }
+-    } else {
+-      const session = neo4j.session()
+-      try {
+-        await session.run("RETURN 1")
+-        neo4jStatus = {
+-          status: "healthy",
+-          latency_ms: Date.now() - start,
+-        }
+-      } finally {
+-        await session.close()
+-      }
+-    }
+-  } catch (err) {
+-    neo4jStatus = {
+-      status: "degraded",
+-      latency_ms: 0,
+-      detail: err instanceof Error ? err.message : String(err),
+-    }
+-  }
+-
+-  // ── Embedding backfill check ─────────────────────────────────────────────
++    const backend = getGraphBackend()
++    const healthy = await createGraphAdapter({ pg }).isHealthy()
++    graphStatus = healthy
++      ? { status: "healthy", latency_ms: Date.now() - start, detail: `${backend} graph adapter reachable` }
++      : { status: "degraded", latency_ms: Date.now() - start, detail: `${backend} graph adapter health check failed` }
++  } catch (error) {
++    graphStatus = { status: "degraded", latency_ms: 0, detail: error instanceof Error ? error.message : String(error) }
++  }
++
++  const workspaceCount = async (operation: string, table: "events" | "canonical_proposals", predicate: string) => {
++    const result = await scopedQuery<{ count: string }>(groupId, context, operation,
++      `SELECT COUNT(*) AS count FROM ${table}
++       WHERE group_id = $1 AND workspace_id = $2 AND ${predicate}`,
++      [groupId, scope.workspaceId])
++    return parseInt(result.rows[0]?.count ?? "0", 10)
++  }
++
+   let embeddingStatus: AuditHealthReportResponse["subsystems"]["embedding_backfill"]
+-
+-  if (pgAvailable && pgInstance) {
++  let curatorStatus: AuditHealthReportResponse["subsystems"]["curator_queue"]
++  if (pgAvailable) {
+     try {
+       const start = Date.now()
+-      const pg = pgInstance
+-      const result = await withCircuitBreaker(
+-        "postgres",
+-        groupId,
+-        "audit_health_report:embedding_backfill",
+-        async () =>
+-          pg.query<{ count: string }>(
+-            `SELECT COUNT(*) AS count
+-             FROM events
+-             WHERE group_id = $1
+-               AND event_type = 'embedding_backfill'`,
+-            [groupId]
+-          )
+-      )
+-      const count = parseInt(result.rows[0]?.count ?? "0", 10)
+-      embeddingStatus = {
+-        status: "healthy",
+-        latency_ms: Date.now() - start,
+-        detail: `${count} embedding_backfill events recorded`,
+-      }
+-    } catch (err) {
+-      embeddingStatus = {
+-        status: "degraded",
+-        latency_ms: 0,
+-        detail: err instanceof Error ? err.message : String(err),
+-      }
+-    }
+-  } else {
+-    embeddingStatus = {
+-      status: "unavailable",
+-      latency_ms: 0,
+-      detail: "PostgreSQL unavailable",
+-    }
+-  }
+-
+-  // ── Curator queue check ──────────────────────────────────────────────────
+-  let curatorStatus: AuditHealthReportResponse["subsystems"]["curator_queue"]
+-
+-  if (pgAvailable && pgInstance) {
++      const count = await workspaceCount("audit_health_report:embedding_backfill", "events", "event_type = 'embedding_backfill'")
++      embeddingStatus = { status: "healthy", latency_ms: Date.now() - start, detail: `${count} embedding_backfill events recorded` }
++    } catch (error) {
++      embeddingStatus = { status: "degraded", latency_ms: 0, detail: error instanceof Error ? error.message : String(error) }
++    }
+     try {
+       const start = Date.now()
+-      const pg = pgInstance
+-      const result = await withCircuitBreaker(
+-        "postgres",
+-        groupId,
+-        "audit_health_report:curator_queue",
+-        async () =>
+-          pg.query<{ count: string }>(
+-            `SELECT COUNT(*) AS count
+-             FROM canonical_proposals
+-             WHERE group_id = $1
+-               AND status = 'pending'`,
+-            [groupId]
+-          )
+-      )
+-      const pendingCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-      curatorStatus = {
+-        status: "healthy",
+-        latency_ms: Date.now() - start,
+-        pending_count: pendingCount,
+-        detail: `${pendingCount} proposals pending curator review`,
+-      }
+-    } catch (err) {
+-      curatorStatus = {
+-        status: "degraded",
+-        latency_ms: 0,
+-        detail: err instanceof Error ? err.message : String(err),
+-      }
++      const pending = await workspaceCount("audit_health_report:curator_queue", "canonical_proposals", "status = 'pending'")
++      curatorStatus = { status: "healthy", latency_ms: Date.now() - start, pending_count: pending, detail: `${pending} proposals pending curator review` }
++    } catch (error) {
++      curatorStatus = { status: "degraded", latency_ms: 0, detail: error instanceof Error ? error.message : String(error) }
+     }
+   } else {
+-    curatorStatus = {
+-      status: "unavailable",
+-      latency_ms: 0,
+-      detail: "PostgreSQL unavailable",
+-    }
+-  }
+-
+-  // ── MCP tool availability ────────────────────────────────────────────────
+-  const mcpStatus: AuditHealthReportResponse["subsystems"]["mcp_tools"] = {
+-    status: "healthy",
+-    latency_ms: 0,
+-    tool_count: MCP_TOOL_COUNT,
+-    detail: `${MCP_TOOL_COUNT} tools registered in MCP gateway`,
+-  }
+-
+-  // ── Overall status ───────────────────────────────────────────────────────
+-  const statuses = [
+-    pgStatus.status,
+-    neo4jStatus.status,
+-    embeddingStatus.status,
+-    curatorStatus.status,
+-    mcpStatus.status,
+-  ]
+-  const overallStatus: AuditHealthReportResponse["overall_status"] =
+-    statuses.some((s) => s === "unavailable")
+-      ? "unavailable"
+-      : statuses.some((s) => s === "degraded")
+-      ? "degraded"
+-      : "healthy"
+-
++    embeddingStatus = { status: "unavailable", latency_ms: 0, detail: "PostgreSQL unavailable" }
++    curatorStatus = { status: "unavailable", latency_ms: 0, detail: "PostgreSQL unavailable" }
++  }
++
++  const toolCount = context.registeredToolCount
++  const mcpStatus: AuditHealthReportResponse["subsystems"]["mcp_tools"] =
++    typeof toolCount === "number" && Number.isSafeInteger(toolCount) && toolCount > 0
++      ? { status: "healthy", latency_ms: 0, tool_count: toolCount, detail: `${toolCount} tools registered in MCP gateway` }
++      : { status: "degraded", latency_ms: 0, detail: "MCP registry is not bound to this audit invocation" }
++  const statuses = [pgStatus.status, graphStatus.status, embeddingStatus.status, curatorStatus.status, mcpStatus.status]
++  const overall_status = statuses.some((s) => s === "unavailable") ? "unavailable" as const
++    : statuses.some((s) => s === "degraded") ? "degraded" as const : "healthy" as const
+   return {
+-    subsystems: {
+-      postgres: pgStatus,
+-      neo4j: neo4jStatus,
+-      embedding_backfill: embeddingStatus,
+-      curator_queue: curatorStatus,
+-      mcp_tools: mcpStatus,
+-    },
+-    overall_status: overallStatus,
+-    checked_at: checkedAt,
+-    meta: pgAvailable ? baseMeta(["postgres"]) : degradedMeta([]),
+-  }
+-}
+-
+-// ── 3. audit_agent_activity ──────────────────────────────────────────────────
+-
+-/**
+- * Query event activity for a specific agent.
+- * Supports optional time range filtering and pagination.
+- * Read-only — no DB writes.
+- */
++    subsystems: { postgres: pgStatus, graph: graphStatus, embedding_backfill: embeddingStatus, curator_queue: curatorStatus, mcp_tools: mcpStatus },
++    overall_status, checked_at: checkedAt, meta: pgAvailable ? baseMeta(["postgres", "graph"]) : degradedMeta([]),
++  }
++}
++
+ export async function audit_agent_activity(
+-  request: AuditAgentActivityRequest
++  request: AuditAgentActivityRequest,
++  context: AuditToolContext,
+ ): Promise<AuditAgentActivityResponse> {
+   const groupId = validateGroupId(request.group_id)
+-
+-  if (!request.agent_id || typeof request.agent_id !== "string") {
+-    throw new Error("agent_id is required and must be a non-empty string")
+-  }
+-
++  const scope = requireAuditScope(groupId, context)
++  if (!request.agent_id || typeof request.agent_id !== "string") throw new Error("agent_id is required and must be a non-empty string")
+   const limit = Math.min(Math.max(1, request.limit ?? 50), 200)
+   const offset = Math.max(0, request.offset ?? 0)
++  const conditions = ["group_id = $1", "workspace_id = $2", "agent_id = $3"]
++  const params: unknown[] = [groupId, scope.workspaceId, request.agent_id]
++  let idx = 4
++  if (request.time_range?.from) { conditions.push(`created_at >= $${idx++}`); params.push(request.time_range.from) }
++  if (request.time_range?.to) { conditions.push(`created_at <= $${idx++}`); params.push(request.time_range.to) }
++  const where = conditions.join(" AND ")
++  try {
++    const [countResult, rowsResult] = await Promise.all([
++      scopedQuery<{ total: string }>(groupId, context, "audit_agent_activity:count", `SELECT COUNT(*) AS total FROM events WHERE ${where}`, params),
++      scopedQuery<{ id: string; event_type: string; agent_id: string | null; status: string; metadata: Record<string, unknown>; created_at: string | Date }>(
++        groupId, context, "audit_agent_activity:fetch",
++        `SELECT id::text,event_type,agent_id,status,metadata,created_at FROM events WHERE ${where}
++         ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`, [...params, limit, offset]),
++    ])
++    const events = rowsResult.rows.map(mapEvent)
++    return { events, event_count: parseInt(countResult.rows[0]?.total ?? "0", 10), agent_id: request.agent_id, limit, offset, has_more: events.length === limit, meta: baseMeta(["postgres"]) }
++  } catch (error) {
++    if (error instanceof DatabaseUnavailableError || error instanceof DatabaseQueryError) throw error
++    if (error instanceof Error && (error as Error & { code?: string }).code) throw classifyPostgresError(error, "audit_agent_activity", "SELECT events")
++    throw error
++  }
++}
++
++export async function audit_invariant_check(
++  request: AuditInvariantCheckRequest,
++  context: AuditToolContext,
++): Promise<AuditInvariantCheckResponse> {
++  const groupId = validateGroupId(request.group_id)
++  const scope = requireAuditScope(groupId, context)
++  const checkedAt = new Date().toISOString()
++  type Result = AuditInvariantCheckResponse["invariants"][number]
++  const invariants: Result[] = []
++
++  const countCheck = async (key: string, name: string, operation: string, sql: string, params: unknown[], ok: (count: number) => boolean, success: (count: number) => string, failure: (count: number) => string) => {
++    try {
++      const result = await scopedQuery<{ count: string }>(groupId, context, operation, sql, params)
++      const count = parseInt(result.rows[0]?.count ?? "0", 10)
++      const passed = ok(count)
++      invariants.push({ key, name, passed, violation_count: passed ? 0 : Math.max(1, count), detail: passed ? success(count) : failure(count) })
++    } catch (error) {
++      invariants.push({ key, name, passed: false, violation_count: 1, detail: `Check failed: ${error instanceof Error ? error.message : String(error)}` })
++    }
++  }
++
++  await countCheck("group_id_constraint", "group_id CHECK Constraint on Events Table", "audit_invariant_check:constraint",
++    `SELECT COUNT(*) AS count FROM information_schema.table_constraints WHERE table_name='events' AND constraint_type='CHECK'`, [],
++    (n) => n > 0, (n) => `${n} CHECK constraint(s) found on events table`, () => "No CHECK constraints found on events table")
++  await countCheck("group_id_namespace_compliance", "No Visible Events Outside Authenticated Scope", "audit_invariant_check:invalid_group_ids",
++    `SELECT COUNT(*) AS count FROM events WHERE workspace_id=$1 AND group_id<>$2`, [scope.workspaceId, groupId],
++    (n) => n === 0, () => "No events visible outside the authenticated tenant/workspace", (n) => `${n} out-of-scope event(s) visible`)
++  await countCheck("no_updated_at_column", "Events Table Has No updated_at", "audit_invariant_check:no_updated_at",
++    `SELECT COUNT(*) AS count FROM information_schema.columns WHERE table_name='events' AND column_name='updated_at'`, [],
++    (n) => n === 0, () => "Events table has no updated_at column", () => "Events table has an updated_at column")
+ 
+   try {
+     const { pg } = await getConnections()
+-
+-    // Build parameterized WHERE clauses
+-    const conditions: string[] = ["group_id = $1", "agent_id = $2"]
+-    const params: unknown[] = [groupId, request.agent_id]
+-    let paramIdx = 3
+-
+-    if (request.time_range?.from) {
+-      conditions.push(`created_at >= $${paramIdx}`)
+-      params.push(request.time_range.from)
+-      paramIdx++
+-    }
+-
+-    if (request.time_range?.to) {
+-      conditions.push(`created_at <= $${paramIdx}`)
+-      params.push(request.time_range.to)
+-      paramIdx++
+-    }
+-
+-    const whereClause = conditions.join(" AND ")
+-
+-    const countResult = await withCircuitBreaker(
+-      "postgres",
+-      groupId,
+-      "audit_agent_activity:count",
+-      async () =>
+-        pg.query<{ total: string }>(
+-          `SELECT COUNT(*) AS total FROM events WHERE ${whereClause}`,
+-          params
+-        )
+-    )
+-
+-    const eventCount = parseInt(countResult.rows[0]?.total ?? "0", 10)
+-
+-    const rowsResult = await withCircuitBreaker(
+-      "postgres",
+-      groupId,
+-      "audit_agent_activity:fetch",
+-      async () =>
+-        pg.query<{
+-          id: string
+-          event_type: string
+-          agent_id: string | null
+-          status: string
+-          metadata: Record<string, unknown>
+-          created_at: string
+-        }>(
+-          `SELECT id::text, event_type, agent_id, status, metadata, created_at
+-           FROM events
+-           WHERE ${whereClause}
+-           ORDER BY created_at DESC
+-           LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+-          [...params, limit, offset]
+-        )
+-    )
+-
+-    const events = rowsResult.rows.map((row) => ({
+-      id: row.id,
+-      event_type: row.event_type,
+-      agent_id: row.agent_id,
+-      status: row.status,
+-      metadata: row.metadata ?? {},
+-      created_at: typeof row.created_at === "string" ? row.created_at : new Date(row.created_at).toISOString(),
+-    }))
+-
+-    return {
+-      events,
+-      event_count: eventCount,
+-      agent_id: request.agent_id,
+-      limit,
+-      offset,
+-      has_more: events.length === limit,
+-      meta: baseMeta(["postgres"]),
+-    }
+-  } catch (error) {
+-    if (error instanceof DatabaseUnavailableError || error instanceof DatabaseQueryError) {
+-      throw error
+-    }
+-    if (error instanceof Error && (error as Error & { code?: string }).code) {
+-      throw classifyPostgresError(error, "audit_agent_activity", "SELECT events")
+-    }
+-    throw error
+-  }
+-}
+-
+-// ── 4. audit_invariant_check ─────────────────────────────────────────────────
+-
+-/**
+- * Validate 7 governance invariants against live data.
+- * Returns per-invariant pass/fail with violation count and detail.
+- * Read-only — no DB writes.
+- *
+- * Invariants checked:
+- * 1. group_id constraint exists on events table
+- * 2. No events with invalid group_id (not matching allura-*)
+- * 3. No events table updated_at column (events are append-only)
+- * 4. Neo4j SUPERSEDES relationships exist (optional — degraded OK)
+- * 5. No approved proposals without decided_by (unapproved promotions)
+- * 6. allura-* namespace compliance (no deprecated group_id prefixes)
+- * 7. Approval required for engine mutations (pol-007)
+- */
+-export async function audit_invariant_check(
+-  request: AuditInvariantCheckRequest
+-): Promise<AuditInvariantCheckResponse> {
+-  const groupId = validateGroupId(request.group_id)
+-  const checkedAt = new Date().toISOString()
+-
+-  let pg: Awaited<ReturnType<typeof getConnections>>["pg"] | null = null
+-  let pgAvailable = false
+-
+-  try {
+-    const connections = await getConnections()
+-    pg = connections.pg
+-    pgAvailable = true
+-  } catch (_err) {
+-    // PG unavailable — all checks will fail with detail
+-  }
+-
+-  type InvariantResult = AuditInvariantCheckResponse["invariants"][number]
+-  const invariants: InvariantResult[] = []
+-
+-  // ── Check 1: group_id constraint exists on events table ───────────────────
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    if (pgAvailable && pg) {
+-      try {
+-        const result = await withCircuitBreaker(
+-          "postgres",
+-          groupId,
+-          "audit_invariant_check:1_constraint",
+-          async () =>
+-            (pg!).query<{ count: string }>(
+-              `SELECT COUNT(*) AS count
+-               FROM information_schema.table_constraints
+-               WHERE table_name = 'events'
+-                 AND constraint_type = 'CHECK'`,
+-              []
+-            )
+-        )
+-        const constraintCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-        passed = constraintCount > 0
+-        violationCount = passed ? 0 : 1
+-        detail = passed
+-          ? `${constraintCount} CHECK constraint(s) found on events table`
+-          : "No CHECK constraints found on events table — group_id constraint may be missing"
+-      } catch (err) {
+-        passed = false
+-        violationCount = 1
+-        detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-      }
+-    } else {
+-      passed = false
+-      violationCount = 1
+-      detail = "PostgreSQL unavailable — cannot verify constraint"
+-    }
+-
+-    invariants.push({
+-      key: "group_id_constraint",
+-      name: "group_id CHECK Constraint on Events Table",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 2: No events with invalid group_id ───────────────────────────────
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    if (pgAvailable && pg) {
+-      try {
+-        const result = await withCircuitBreaker(
+-          "postgres",
+-          groupId,
+-          "audit_invariant_check:2_invalid_group_ids",
+-          async () =>
+-            (pg!).query<{ count: string }>(
+-              `SELECT COUNT(*) AS count
+-               FROM events
+-               WHERE group_id NOT LIKE 'allura-%'`,
+-              []
+-            )
+-        )
+-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-        passed = violationCount === 0
+-        detail = passed
+-          ? "All events have valid allura-* group_id"
+-          : `${violationCount} event(s) found with invalid group_id (not matching allura-*)`
+-      } catch (err) {
+-        passed = false
+-        violationCount = 1
+-        detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-      }
+-    } else {
+-      passed = false
+-      violationCount = 1
+-      detail = "PostgreSQL unavailable — cannot verify group_id compliance"
+-    }
+-
+-    invariants.push({
+-      key: "group_id_namespace_compliance",
+-      name: "No Events with Invalid group_id (allura-* Compliance)",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 3: Events table is append-only (no updated_at column) ────────────
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    if (pgAvailable && pg) {
+-      try {
+-        const result = await withCircuitBreaker(
+-          "postgres",
+-          groupId,
+-          "audit_invariant_check:3_no_updated_at",
+-          async () =>
+-            (pg!).query<{ count: string }>(
+-              `SELECT COUNT(*) AS count
+-               FROM information_schema.columns
+-               WHERE table_name = 'events'
+-                 AND column_name = 'updated_at'`,
+-              []
+-            )
+-        )
+-        const updatedAtCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-        // Append-only: events table should NOT have updated_at
+-        passed = updatedAtCount === 0
+-        violationCount = updatedAtCount
+-        detail = passed
+-          ? "Events table has no updated_at column — append-only invariant is structurally enforced"
+-          : "Events table has an updated_at column — this violates the append-only invariant"
+-      } catch (err) {
+-        passed = false
+-        violationCount = 1
+-        detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-      }
+-    } else {
+-      passed = false
+-      violationCount = 1
+-      detail = "PostgreSQL unavailable — cannot verify append-only structure"
+-    }
+-
+-    invariants.push({
+-      key: "no_updated_at_column",
+-      name: "Events Table Has No updated_at (Append-Only Structural Check)",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 4: Neo4j SUPERSEDES relationships exist (optional) ─────────────
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    try {
+-      const { neo4j } = await getConnections()
+-      if (!neo4j) {
+-        passed = false
+-        detail = "Neo4j disabled (GRAPH_BACKEND=ruvector) — supersede check skipped"
+-      } else {
+-        const session = neo4j.session()
+-        try {
+-          const result = await session.run(
+-            "MATCH ()-[r:SUPERSEDES]->() RETURN count(r) AS cnt LIMIT 1"
+-          )
+-          const cnt = result.records[0]?.get("cnt")
+-          const supersededCount = typeof cnt === "object" && cnt !== null && "low" in cnt
+-            ? (cnt as { low: number }).low
+-            : typeof cnt === "number"
+-            ? cnt
+-            : 0
+-          // Acceptable to have 0 (fresh system) — just check Neo4j is reachable
+-          passed = true
+-          violationCount = 0
+-          detail = `Neo4j reachable; ${supersededCount} SUPERSEDES relationship(s) found`
+-        } finally {
+-          await session.close()
+-        }
+-      }
+-    } catch (err) {
+-      // Neo4j is optional — treat as degraded, not a hard failure
+-      passed = true  // Not a violation — Neo4j is optional
+-      violationCount = 0
+-      detail = `Neo4j check skipped (unavailable): ${err instanceof Error ? err.message : String(err)}`
+-    }
+-
+-    invariants.push({
+-      key: "neo4j_supersedes",
+-      name: "Neo4j SUPERSEDES Versioning (Read Check)",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 5: No unapproved promotions (approved proposals without decided_by) ──
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    if (pgAvailable && pg) {
+-      try {
+-        const result = await withCircuitBreaker(
+-          "postgres",
+-          groupId,
+-          "audit_invariant_check:5_unapproved_promotions",
+-          async () =>
+-            (pg!).query<{ count: string }>(
+-              `SELECT COUNT(*) AS count
+-               FROM canonical_proposals
+-               WHERE group_id = $1
+-                 AND status = 'approved'
+-                 AND (decided_by IS NULL OR decided_by = '')`,
+-              [groupId]
+-            )
+-        )
+-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-        passed = violationCount === 0
+-        detail = passed
+-          ? "All approved proposals have decided_by set — no unapproved promotions detected"
+-          : `${violationCount} approved proposal(s) found without decided_by — HITL requirement may have been bypassed`
+-      } catch (err) {
+-        passed = false
+-        violationCount = 1
+-        detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-      }
+-    } else {
+-      passed = false
+-      violationCount = 1
+-      detail = "PostgreSQL unavailable — cannot verify HITL promotion compliance"
+-    }
+-
+-    invariants.push({
+-      key: "hitl_promotion",
+-      name: "HITL Required for Promotion (No Unapproved Autonomous Promotions)",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 6: allura-* namespace compliance (no deprecated group_id prefixes) ──
+-  // Uses a parameterized pattern built from the DEPRECATED_NS_PREFIX constant
+-  // so static analysis tools can distinguish audit detection from actual usage.
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    if (pgAvailable && pg) {
+-      try {
+-        const deprecatedPattern = `${DEPRECATED_NS_PREFIX}-%`
+-        const result = await withCircuitBreaker(
+-          "postgres",
+-          groupId,
+-          "audit_invariant_check:6_namespace_compliance",
+-          async () =>
+-            (pg!).query<{ count: string }>(
+-              `SELECT COUNT(*) AS count
+-               FROM events
+-               WHERE group_id LIKE $1
+-                  OR group_id NOT LIKE 'allura-%'`,
+-              [deprecatedPattern]
+-            )
+-        )
+-        violationCount = parseInt(result.rows[0]?.count ?? "0", 10)
+-        passed = violationCount === 0
+-        detail = passed
+-          ? "All events use allura-* namespace — no deprecated group_id prefixes found"
+-          : `${violationCount} event(s) found with non-compliant group_id (deprecated or non-allura namespace)`
+-      } catch (err) {
+-        passed = false
+-        violationCount = 1
+-        detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-      }
+-    } else {
+-      passed = false
+-      violationCount = 1
+-      detail = "PostgreSQL unavailable — cannot verify namespace compliance"
+-    }
+-
+-    invariants.push({
+-      key: "allura_namespace",
+-      name: "allura-* Tenant Namespace Compliance",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  // ── Check 7: Approval required for engine mutations (pol-007) ─────────────
+-  {
+-    let passed = false
+-    let detail = ""
+-    let violationCount = 0
+-
+-    // Static structural check: the control-plane gate code and the invariant
+-    // policy must both be present. We verify APPROVAL_REQUIRED_KINDS is
+-    // exported and that the registry contains pol-007.
+-    try {
+-      const { APPROVAL_REQUIRED_KINDS } = await import("@/control-plane/syscalls")
+-      const hasKinds = Array.isArray(APPROVAL_REQUIRED_KINDS) && APPROVAL_REQUIRED_KINDS.length > 0
+-      const { CANONICAL_POLICIES } = await import("@/lib/governance/policies")
+-      const hasPolicy = CANONICAL_POLICIES.some((p) => p.id === "pol-007" && p.invariant_key === "approval_required_for_mutations")
+-
+-      passed = hasKinds && hasPolicy
+-      violationCount = passed ? 0 : 1
+-      detail = passed
+-        ? `pol-007 wired: ${APPROVAL_REQUIRED_KINDS.length} approval-required kind(s) registered`
+-        : "pol-007 not wired — approval-required gate may be disabled"
+-    } catch (err) {
+-      passed = false
+-      violationCount = 1
+-      detail = `Check failed: ${err instanceof Error ? err.message : String(err)}`
+-    }
+-
+-    invariants.push({
+-      key: "approval_required_for_mutations",
+-      name: "Approval Required for Engine Mutations (pol-007)",
+-      passed,
+-      violation_count: violationCount,
+-      detail,
+-    })
+-  }
+-
+-  const overallPassed = invariants.every((inv) => inv.passed)
+-
+-  return {
+-    invariants,
+-    overall_passed: overallPassed,
+-    checked_at: checkedAt,
+-    meta: pgAvailable ? baseMeta(["postgres"]) : degradedMeta([]),
+-  }
+-}
++    const backend = getGraphBackend()
++    const status = await createGraphAdapter({ pg }).getVersioningStatus({ group_id: groupId, workspace_id: scope.workspaceId, principal_id: scope.principalId })
++    invariants.push({ key: "graph_supersedes", name: "Active Graph SUPERSEDES Versioning", passed: true, violation_count: 0, detail: `${backend} graph adapter reports ${status.supersedesCount} workspace-scoped SUPERSEDES record(s)` })
++  } catch (error) {
++    invariants.push({ key: "graph_supersedes", name: "Active Graph SUPERSEDES Versioning", passed: false, violation_count: 1, detail: `Active graph versioning check failed: ${error instanceof Error ? error.message : String(error)}` })
++  }
++
++  await countCheck("hitl_promotion", "HITL Required for Promotion", "audit_invariant_check:hitl",
++    `SELECT COUNT(*) AS count FROM canonical_proposals
++     WHERE group_id=$1 AND workspace_id=$2 AND status='approved' AND (decided_by IS NULL OR decided_by='')`, [groupId, scope.workspaceId],
++    (n) => n === 0, () => "All approved workspace proposals have decided_by set", (n) => `${n} approved proposal(s) lack decided_by`)
++  const deprecatedPattern = `${DEPRECATED_NS_PREFIX}-%`
++  await countCheck("allura_namespace", "allura-* Tenant Namespace Compliance", "audit_invariant_check:namespace",
++    `SELECT COUNT(*) AS count FROM events
++     WHERE workspace_id=$1 AND group_id=$2 AND (group_id LIKE $3 OR group_id NOT LIKE 'allura-%')`, [scope.workspaceId, groupId, deprecatedPattern],
++    (n) => n === 0, () => "All visible workspace events use the allura-* namespace", (n) => `${n} non-compliant event(s) found`)
++
++  try {
++    const { APPROVAL_REQUIRED_KINDS } = await import("@/control-plane/syscalls")
++    const { CANONICAL_POLICIES } = await import("@/lib/governance/policies")
++    const passed = Array.isArray(APPROVAL_REQUIRED_KINDS) && APPROVAL_REQUIRED_KINDS.length > 0 && CANONICAL_POLICIES.some((p) => p.id === "pol-007" && p.invariant_key === "approval_required_for_mutations")
++    invariants.push({ key: "approval_required_for_mutations", name: "Approval Required for Engine Mutations (pol-007)", passed, violation_count: passed ? 0 : 1, detail: passed ? `pol-007 wired: ${APPROVAL_REQUIRED_KINDS.length} approval-required kind(s) registered` : "pol-007 not wired" })
++  } catch (error) {
++    invariants.push({ key: "approval_required_for_mutations", name: "Approval Required for Engine Mutations (pol-007)", passed: false, violation_count: 1, detail: `Check failed: ${error instanceof Error ? error.message : String(error)}` })
++  }
++
++  return { invariants, overall_passed: invariants.every((item) => item.passed), checked_at: checkedAt, meta: baseMeta(["postgres", "graph"]) }
++}
+--- a/src/mcp/canonical-http-gateway.ts
++++ b/src/mcp/canonical-http-gateway.ts
+@@ -24,6 +24,7 @@
+   CallToolRequestSchema,
+   isInitializeRequest,
+   ListToolsRequestSchema,
++  type ListToolsResult,
+ } from "@modelcontextprotocol/sdk/types.js";
+ import { config } from "dotenv";
+ import { randomUUID } from "crypto";
+@@ -271,6 +272,7 @@
+   audit_health_report,
+   audit_invariant_check,
+   audit_query_events,
++  auditToolContextFromPrincipal,
+ } from "./audit-tools.js";
+ 
+ import {
+@@ -319,9 +321,7 @@
+ // ── MCP Tool Handlers (Streamable HTTP) ──────────────────────────────────────
+ 
+ // List tools handler
+-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+-  return {
+-    tools: [
++const registeredTools: ListToolsResult["tools"] = [
+       {
+         name: "memory_add",
+         description:
+@@ -635,7 +635,7 @@
+         name: "audit_health_report",
+         description:
+           "Check all Allura Brain subsystem health statuses and return a structured per-subsystem report. " +
+-          "Checks: PostgreSQL, Neo4j, embedding backfill, curator queue depth, and MCP tool availability. " +
++          "Checks: PostgreSQL, the active RuVector graph adapter, embedding backfill, curator queue depth, and MCP tool availability. " +
+           "Read-only — no DB writes.",
+         inputSchema: {
+           type: "object",
+@@ -674,8 +674,8 @@
+         name: "audit_invariant_check",
+         description:
+           "Validate all 6 Allura governance invariants against live data and report per-check pass/fail " +
+-          "with violation counts. Checks: group_id constraint, no invalid group_ids, append-only structure, " +
+-          "Neo4j SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
++          "with violation counts. Checks: group_id constraint, workspace isolation, append-only structure, " +
++          "active graph SUPERSEDES, HITL promotion compliance, and allura-* namespace. Read-only — no DB writes.",
+         inputSchema: {
+           type: "object",
+           properties: {
+@@ -765,9 +765,8 @@
+           required: ["group_id", "lane_id", "snapshot_id", "verdict", "reason"],
+         },
+       },
+-    ],
+-  };
+-});
++];
++mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: registeredTools }));
+ 
+ // Tool execution handler
+ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+@@ -817,6 +816,9 @@
+ 
+   try {
+     let result: unknown;
++    const auditContext = name.startsWith("audit_")
++      ? { ...auditToolContextFromPrincipal(principal!), registeredToolCount: registeredTools.length }
++      : undefined;
+     switch (name) {
+       case "memory_add":
+         result = await memory_add(verifiedMemoryAddRequest!);
+@@ -873,16 +875,16 @@
+         break;
+       // ── Audit Tools (Story 9.2) ────────────────────────────────────────
+       case "audit_query_events":
+-        result = await audit_query_events(args as unknown as AuditQueryEventsRequest);
++        result = await audit_query_events(args as unknown as AuditQueryEventsRequest, auditContext!);
+         break;
+       case "audit_health_report":
+-        result = await audit_health_report(args as unknown as AuditHealthReportRequest);
++        result = await audit_health_report(args as unknown as AuditHealthReportRequest, auditContext!);
+         break;
+       case "audit_agent_activity":
+-        result = await audit_agent_activity(args as unknown as AuditAgentActivityRequest);
++        result = await audit_agent_activity(args as unknown as AuditAgentActivityRequest, auditContext!);
+         break;
+       case "audit_invariant_check":
+-        result = await audit_invariant_check(args as unknown as AuditInvariantCheckRequest);
++        result = await audit_invariant_check(args as unknown as AuditInvariantCheckRequest, auditContext!);
+         break;
+       case "evidence_inspect":
+         result = await inspectEvidenceArtifacts();

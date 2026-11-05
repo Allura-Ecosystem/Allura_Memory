@@ -1,0 +1,12 @@
+{
+  "src/app/api/settings/route.ts": "ea835348f5665d50c22711de9362c1e0ba630e0e03b3d3b60a6e503a823317b2",
+  "src/lib/brain-client.ts": "dc168e6f23535d4d751bedfd3cead9dafcf294dd7fa89fd560fe7a9adc7e14f2",
+  "src/lib/graph-adapter/index.ts": "d9e8746c039df1d0dd8d82143ac44797f56a9fa87efda090084167a94f53bcbc",
+  "src/lib/graph-adapter/ruvector-adapter.ts": "8e41441579fe4bae08479a9605a827ea63d8546d771a6656e03e2c88a3286431",
+  "src/lib/graph-adapter/ruvector-crate-adapter.ts": "f2fea9a074371c9affba5baf5883813732718d0b25dc7958a6e815dfaee285a5",
+  "src/lib/graph-adapter/types.ts": "518f8fcb5c5fba8af068f3d68ad32a1a9b2660291cfd12c792f9ded1826b8d67",
+  "src/lib/memory/canonical-contracts.ts": "1cdb6e7744e3cf6b30ede91b7c248f49020223aa2779d3f1fffd9c22c9c78156",
+  "src/lib/operational-state/sources/settings-source.ts": "2b056282be61f6e4760874fe4a741046ae5a979d303cf4560558e89b4305bf73",
+  "src/mcp/audit-tools.ts": "38d680d8e6c4c66288decac11bf80aa9699f876af806bba069e5765a85dde66e",
+  "src/mcp/canonical-http-gateway.ts": "26ad66fb1bec617ae68cb4fad88c44350965c5ee0a9481bd7e5bada837555b68"
+}
