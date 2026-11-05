@@ -1,5 +1,19 @@
 # Design Specification: Allura Memory Command Center
 
+## Controlling Bahari functional UX amendment — approved 2026-11-05
+
+The [approved Correct Course](../../_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-05-bahari.md) and [Story 9.5](../../_bmad-output/planning-artifacts/stories/9.5-bahari-grouped-review.md) adopt one complete conversational curation journey over existing governed Allura services. Preserve the operator UI, graph, official assets/tokens/Plex, immutable history, existing bounded implementation evidence and open actual-user/deployment gates. No new brand/chat engine or broader scheduler is selected.
+
+Ordinary flow: verified account/space and callable actions → complete bounded frozen queue/evidence review → one grouped exact wording/source/recommendation/exception selection → genuine independently eligible human decisions → verified per-item activity and current retrieval. Later arrivals and changed revisions do not enter old approval. The user is not asked repeatedly whether they want the cleanup they already requested. The model's classification does not commit a decision.
+
+Use plain organization labels Overview, Memories, Needs your decision, Activity and Settings over supported surfaces, not invented routes. Explain capture versus proposal versus approved knowledge. Keep raw scope/tool diagnostics optional without hiding account, permission, evidence or uncertainty. Curate for me remains unavailable under existing human-promotion policy; Review every change requires a real staging-before-persistence boundary. Source selection and connection consent grant no semantic authority.
+
+Differentiate unavailable connection, denied source/action, required independent human review, evidence conflict, expired/revoked authority, known rollback and unconfirmed commit. Supported discovery recovery happens once only; do not recommend reconnecting unchanged code as a cure for missing features. Activity reports verified completed/held/conflict/partial/unconfirmed with precise coverage, source history and receipts; proposal rejection never deletes source notes. Universal undo or erasure of append-only history is not promised.
+
+Keyboard-operable named controls, textual non-color status, preserved focus after batch actions/returned dialog focus and usability at 200% zoom are test obligations. A real personal/project/team task journey is required; local restricted-source rules are not imposed globally. Historical age/score heuristics below are not current research or pass thresholds; old universal 30-day restore/permanent-erasure copy is not an accepted removal contract. Supported lifecycle behavior and immutable-history limits control.
+
+The [curator feature contract](../../_bmad-output/planning-artifacts/contracts/curator-batch-v1.md) owns frozen membership, authority, revisions and replay; UI cannot invent them. Existing 6.5/9.4 release/human/rollback, exact retained-screen and actual installed-client evidence remain separate. Noon schedule/app-open/background claims from the brief remain reported/unverified and outside this milestone. No scheduler tick/no-change memory proposal is created. This amendment is specification, not implementation or usability acceptance.
+
 > [!NOTE]
 > **AI-Assisted Documentation**
 > Portions of this document were drafted with AI assistance; Codex prepared the 2026-10-20 development-readiness additions and React store-preview alignment.

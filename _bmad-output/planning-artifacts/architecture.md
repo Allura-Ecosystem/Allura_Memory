@@ -1,10 +1,20 @@
 ---
 name: Allura Memory Fresh-build Architecture Spine
-status: sequential-rebuild-contracts-gated
-updated: 2026-10-26
+status: approved-curator-feature-design-implementation-gated
+updated: 2026-11-05
 ---
 
 # Architecture Spine — Allura Memory
+
+## Controlling bounded curator architecture — approved 2026-11-05
+
+Apply the [approved Correct Course](sprint-change-proposal-2026-11-05-bahari.md) and [curator-batch-v1 feature contract](contracts/curator-batch-v1.md). Add the smallest operational review coordinator over existing authentication, restricted PostgreSQL, immutable proposal/evidence and exact human decision services. One authority plane; no new database, provider, scheduler or general executor.
+
+Logical flow: conversation/client preparation → current permitted queue/evidence service → immutable frozen/sealed review set → genuine independent human selection/decision → existing per-item transactional decisions → authoritative receipt/readback → reconciled outcome. The model recommends classifications/wording; services enforce actor/action/revision/state and stable replay identities. Whole-batch exactly-once/atomicity or deterministic model answers are not promised.
+
+Preparation uses existing current review:read and compatible credential ceilings, never a borrowed human identity or newly widened grant. New machine-facing operations are preparation/read only; selected/device ceilings are preserved. Human approve/reject/request_evidence retain current review:approve, review:read and requester/producer/source-author independence. Changed content/new arrivals are outside reviewed authorization. Completion is per item and receipt-backed; held/unknown/conflict/partial stay distinct. Detailed API/SQL design is pinned before 4.5's first production write, not invented at rollout.
+
+Build 4.5 → 6.6 → 9.5 before desktop expansion; preserve blocked 13.2 and separate shared canonical verification remedy. Do not feed curation into the pinned human-admin artifact handoff executor or automatically transition native work items. Existing architecture diagrams, accepted source/receipts and current policy remain; later scheduling/delegation/runtime integration requires separate scope. These are local requirements/design, not implementation/release proof. This section supersedes older reset-era current/next-story descriptions below only where conflicting.
 
 ## Controlling architecture scope amendment — 2026-10-31
 

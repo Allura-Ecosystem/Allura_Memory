@@ -2,7 +2,7 @@
 title: "PRD: Allura Memory Fresh-build Product Contract"
 status: approved-rebuild-direction-applied-open-decisions-retained
 created: 2026-10-25
-updated: 2026-10-26
+updated: 2026-11-05
 bmadWorkflow: bmad-prd
 workflowMode: headless-targeted-update
 approval: "Fresh rebuild and document correction explicitly approved; unresolved product/technical choices not adopted"
@@ -13,6 +13,22 @@ reviewEvidence: ./prd-review-20261025T040936Z/validation-report.md
 ---
 
 # PRD: Allura Memory
+
+## Controlling Bahari functional milestone — approved 2026-11-05
+
+[Approved Correct Course](../../sprint-change-proposal-2026-11-05-bahari.md) adopts a conversational curator experience over Allura, not a replacement memory engine or new brand. Bahari's everyday personal/project/team task experience complements the existing developer/team engine audience; this does not rewrite Allura's global commercial positioning. Product scope is one complete current-policy reviewed batch before desktop expansion. No standing semantic delegation, automatic rejection/closure, general scheduler/agent executor, source migration or live grant follows.
+
+Additive requirements below preserve original FR/NFR/DOC/AD identities. They are adopted requirements, not existing capability or acceptance:
+
+- **BAH-R01:** resolve verified current account/space and action-specific callable capabilities; unsupported review never appears Ready from tool registration alone. Story 6.6, then 9.5.
+- **BAH-R02:** review every page/full permitted evidence of a bounded frozen set with exact proposal revisions; distinguish later arrivals, changed content and uncovered evidence. Story 4.5.
+- **BAH-R03:** handle cleanup as a task, not another consent menu; present one exact grouped genuine-independent-human review for actions current policy requires. No source/connection permission substitutes for semantic decision authority. Stories 6.6/9.5; FR-B2/B3 remain unchanged.
+- **BAH-R04:** retain stable per-item operation identities, authoritative receipts, same-key lost-response reconciliation, current-authority checks and fresh-process continuation. Do not repeat verified effects or collapse unknown into Done. Stories 4.5/6.6.
+- **BAH-R05:** report coverage and verified item outcomes separately from recommendations, held items and live queue observations; preserve original evidence/history and current authorized retrieval. No maintenance capture/proposal solely for a tick/no-change result. Stories 4.5/9.5.
+- **BAH-R06:** ordinary copy explains evidence, scope, approval and recovery; actual controls are keyboard-operable, screen-reader named, text-status labeled, usable at 200% zoom and preserve focus after batch actions. Existing assets/tokens remain. Story 9.5; extend 9.4 acceptance without closing its open gates.
+- **BAH-R07:** keep operational review state outside semantic memory in Allura PostgreSQL; do not infer work-item transitions or misuse the pinned Epic 12 executor. Standalone policy-backed delegation, scheduling/catch-up and broader deterministic agent execution remain later explicit work.
+
+The [curator batch contract](../../contracts/curator-batch-v1.md) records adopted bounded feature design; 4.5 first finalizes exact DTO/SQL/transport before test-first implementation. [Current epic priority](../../epics.md#controlling-curation-priority-amendment--2026-11-05) supersedes older reset-state next-story prose below, not actual source/acceptance evidence. Preserve blocked 13.2 create and all actual 6.5/9.4/installed/deployed/human/platform gates. No semantic policy, permission, status or runtime changed by this amendment.
 
 ## Controlling local all-14 scope and decision amendment — 2026-10-31
 

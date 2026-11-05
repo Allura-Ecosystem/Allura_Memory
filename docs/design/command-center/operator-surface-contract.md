@@ -15,6 +15,14 @@ Allura is an evidence-first operator surface. It is mission-control software for
 
 This file formalizes existing tokens in `src/app/globals.css`; it does not create a second brand. New components use existing CSS custom properties (`var(--c-*)`, `var(--allura-*)`) rather than literal hex values.
 
+## Adopted Bahari grouped task boundary — 2026-11-05
+
+The [approved curation milestone](../../../_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-05-bahari.md) extends the retained operator surface with a conversational curator experience; it does not replace or rebrand it. Story 9.5 uses the same official assets, Plex, semantic tokens and inspector/confirmation patterns. Proposed plain-language destinations organize Overview, Memories, Needs your decision, Activity and Settings; only genuinely implemented/authorized routes are clickable.
+
+Show verified space/account, sources, before/after wording, current review state and exact evidence. Handle cleanup as work; ask once for exact independent-human review where needed, not repeated general consent. Source connection is not decision authority. Curate for me stays unavailable under current policy; no unsupported before-persistence mode, name picker, recovery button, undo or app-open trigger is promised.
+
+Activity comes from per-item authoritative receipts/readback, distinguishing held/conflict/partial/unconfirmed from completed; timeout never implies rollback. Optional diagnostics contain raw IDs/scopes/tools while ordinary copy retains safety meaning. Keyboard/screen-reader labels, textual status, consequential scope confirmation, focus retention/return and 200% zoom are required actual-browser tests. Source presence, component checks and a document amendment are not actual-human or deployed usability acceptance. Preserve open 9.4 gates.
+
 ## Colors
 
 - **Canvas:** cream workspace background; never a decorative gradient.

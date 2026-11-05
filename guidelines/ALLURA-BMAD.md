@@ -4,6 +4,14 @@ Updated 2026-10-26 under the user's explicit Correct Course authorization. This 
 
 ## Current authority and baseline
 
+### Controlling Bahari priority and bounded adoption — 2026-11-05
+
+Sabir approved the Brooks recommendation to consolidate and apply the [narrow curation Correct Course](../_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-05-bahari.md): preserve blocked 13.2 create; add follow-up Stories 4.5, 6.6 and 9.5 within existing epics; deliver complete current-policy curation before desktop expansion. No new Epic 12 workflow/general executor/scheduler, promotion policy or live permission is adopted. Use the [current catalog priority](../_bmad-output/planning-artifacts/epics.md#controlling-curation-priority-amendment--2026-11-05), [feature contract](../_bmad-output/planning-artifacts/contracts/curator-batch-v1.md) and concrete new story files. Ordinary local engineering design remains delegated; unresolved authority/policy changes are not ordinary defaults.
+
+Current next bounded work is 4.5 exact contract finalization and actual RED, then 6.6 and 9.5 after dependencies, not stale next-1.2/2.1 prose below. Preserve all prior story/epic evidence and 13.2 candidate bytes; no story is closed by this planning amendment. Current canonical verification still fails at the fixed DB batch-3 budget. No lucky rerun, increased bound, removed case/floor or source-pin weakening follows. Inspect retained timings read-only and obtain a bounded remedy disposition before changing that lane; no new acceptance until actual required verification passes.
+
+Use installed bmad-build, one admitted writer, real tests/direct self-checks and current ownership/STOP controls. The correct-course/sprint-planning methods do not authorize status YAML, a shadow board, policy mutation, production/data/grants/credentials/tunnel changes, push or deployment. Independent authorized human semantic decisions remain mandatory. Source/receipt evidence outranks historical reset status. No Brain retry/write or live-status claim is required for this local amendment under the existing write hold and outage rules.
+
 ### Direct-build correction — controlling execution authority, 2026-10-26
 
 #### Controlling all-14 local scope amendment — 2026-10-31

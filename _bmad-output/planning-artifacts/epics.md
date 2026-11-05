@@ -1,11 +1,25 @@
 ---
 title: Allura Memory sequential fresh-build epic catalog
-status: approved-sequence-local-foundation-verified-product-incomplete
-updated: 2026-10-26
+status: approved-sequence-curation-amendment-product-incomplete
+updated: 2026-11-05
 operationalStatus: unknown
 ---
 
 # Fresh rebuild — Epic 1 onward
+
+## Controlling curation priority amendment — 2026-11-05
+
+Sabir approved the [bounded Bahari Correct Course](sprint-change-proposal-2026-11-05-bahari.md). Add the following follow-up stories within existing epics; no Epic 15, global renumbering, rollback or new promotion policy. This section is current delivery planning, not live Allura status or implementation acceptance. It supersedes older reset-era next-1.2/2.1, blanket prior-epic closure and deferred-12–14 sequencing prose below where they conflict; retain the historical sections and actual evidence.
+
+| Story | User outcome | Functional prerequisites | Planning/admission disposition |
+|---|---|---|---|
+| [4.5](stories/4.5-frozen-curation-batches.md) | Complete frozen evidence-linked review and verified per-item human decisions | Existing 4.1–4.4 authority/decision/lifecycle; current gateway/persistence | Approved for bounded contract finalization and first real RED; not implemented/accepted |
+| [6.6](stories/6.6-curator-client-integration.md) | Actual agent preparation/readback and genuine human handoff | 4.5 and accepted 6.2 consumer foundations | Approved dependent local scope; installed-client witness required |
+| [9.5](stories/9.5-bahari-grouped-review.md) | Understandable grouped task, exceptions, activity and accessibility | 4.5, 6.6 and accepted 9.2 surface foundations | Approved dependent local scope; actual-user/release gates separate |
+
+**Current priority:** preserve blocked 13.2 create checkpoint → 4.5 → 6.6 → 9.5 → remaining dependency-ready 13.x/14.x. Existing 13.2 create acceptance is still blocked by the shared canonical database batch timeout; no new acceptance is allowed without a genuinely passing required verification lane. Read-only timing analysis may prepare one explicitly scoped remedy; do not repeat lucky full runs, raise bounds or remove required cases. This is not permission to bypass an active writer/STOP or failed gate. No live work transition is recorded here.
+
+Epics 12/13/14 remain approved later local scope, but a new curator scheduler/general executor/work-plane/desktop integration is not part of this milestone. Current independent authorized human decisions and immutable history remain mandatory. Accepted old stories keep their bounded evidence; actual 6.5/9.4, installed-client, deployed, human and platform acceptance remain open.
 
 ## Controlling local all-14 adoption — 2026-10-31
 
@@ -95,6 +109,7 @@ Sources: FR-B1–B5, memory_delete part of FR-A1, DOC-06, DOC-J03–05, DEV-AC03
 - 4.2 Prove atomic immutable semantic version, lineage, decision event/receipt and outbox intent; inject failures at every durable boundary. Reject unauthorized/self-approval.
 - 4.3 Resolve AD-67 correction fields/public mapping/base-head/concurrency; implement pending correction, renewed human review and one-current-head concurrency without mutating old content/edges.
 - 4.4 Implement governed soft deletion and history visibility. Resolve DOC-03 restore lineage and DOC-05 distinct-proposal duplicate policy before the affected restore/duplicate behavior; neither is silently inferred from correction.
+- [4.5 Frozen curation batches](stories/4.5-frozen-curation-batches.md) — approved additive follow-up: complete scoped frozen inventory/evidence, grouped exact human selection and receipt-backed partial reconciliation under curator-batch-v1. Prerequisites 4.1–4.4; first bounded gate is exact-contract finalization and behavioral RED, not product acceptance.
 
 Acceptance: preserved historical versions/receipts, no partial approval state, stale/conflicting review writes nothing, one current head, replay integrity, immutable deletion evidence and explicit affected-policy decisions. Do not close this epic while its defined restore/duplicate scope remains unresolved.
 
@@ -119,6 +134,7 @@ Sources: FR-D1/D3/D5/F1/F2, NFR-3/5/7/8, AD-68/71, DEV-AC06–08/11/12, BE-AC02/
 - 6.3 Establish exact-revision authoritative CI, frozen installs, nonzero required-file/assertion discovery, independent lint/typecheck and failure-sensitive lanes. All jobs must belong to the current attempt; no stale receipt aggregation.
 - 6.4 Define the missing complete self-hosted release AC from FR-F2, then prove isolated clean initialization, restricted role, real authentication/finite compatible embeddings, restart/recovery and manifest-bound backup/restore integrity. AD-71 preparation is not permission to provision or run a shared stack.
 - 6.5 Directly witness the complete DOC-J01–06 core journey and honest capability claims on the exact authorized deployment under the current direct-self-check development methodology. Include rollback preserving evidence/history, current-SHA CI and retrospective. Independent authorized human semantic approval remains mandatory; no independent developer-review signoff is required. Optional DOC-J07/09 close only in their own epics.
+- [6.6 Curator-client integration](stories/6.6-curator-client-integration.md) — approved additive follow-up after 4.5 and 6.2: versioned preparation/readback operations in the actual client plus genuine independent-human handoff, truthful action-level capability/recovery and installed-client evidence. Preserve existing core five-tool semantics.
 
 Acceptance: local versus hosted versus deployed evidence separated; explicit resource/credential/target authority; no product release by successful build alone. Whole-product/optional roadmap completion is not claimed at this core gate.
 
@@ -151,6 +167,7 @@ Sources: FR-E1–E4, BP-F14–19/41/42/47/48/68, DS operator/graph/audit contrac
 - 9.2 Implement authenticated overview, memories/search, curator review/evidence requests, governance, audit/export, settings/health and authorized device/embedding administration through governed APIs only. Map every route to authoritative service and honest loading/empty/denied/conflict/degraded/unknown/success states.
 - 9.3 Implement the interactive knowledge graph/Memory Map with persisted same-scope relationships, selection/filtering/inspection, pan/zoom and keyboard/text alternative. Counts or a static mock do not meet graph acceptance. Bound data/layout work; validate malformed navigation and contain screen failures.
 - 9.4 Independently verify real multi-user denial/revocation/stale review, browser controls, responsive screenshots, focus/accessible names/ARIA/high contrast and real-human tasks. Bind exact revision, visual parity, rollback and authorized deployed target.
+- [9.5 Bahari grouped review](stories/9.5-bahari-grouped-review.md) — approved additive follow-up after 4.5/6.6/9.2: conversational current-policy cleanup, exact grouped evidence/decisions, verified activity/exception states and keyboard/screen-reader/focus/200%-zoom acceptance. Extend 9.4 actual-user/deployed journey coverage without closing its existing gates.
 
 Acceptance: DOC-J07/DEV-AC10 and applicable CF/ENT/PV evidence; no fabricated live charts or health. Work items remain unavailable/non-authoritative until Epic 13's DOC-09 decision. Future runs/resources/agents/telemetry views may truthfully show unavailable state; they cannot make deferred backends prerequisites for the core UI. Read-only Ask, contractor messaging and proposed intelligence/client expansions remain unaccepted product choices, not implicitly delivered UI.
 

@@ -1,11 +1,23 @@
 ---
 title: Allura Memory sequential rebuild readiness
-status: epic-1-incomplete-story-1.1-locally-verified
-updated: 2026-10-26
+status: curation-contract-admitted-canonical-acceptance-blocked
+updated: 2026-11-05
 operationalStatus: unknown
 ---
 
 # Current readiness
+
+## Current bounded curation readiness — 2026-11-05
+
+[Approved Correct Course](sprint-change-proposal-2026-11-05-bahari.md) adds 4.5 → 6.6 → 9.5 to existing epics and prioritizes a useful current-policy batch before desktop expansion. The new story files/curator feature contract contain intent, dependencies, acceptance, exclusions, source maps and first RED. Story 4.5 is ready for its bounded exact-contract/RED admission, not a claim the final DTO/SQL design or product is implemented. Current controller confirms sole writer and active STOP before implementation.
+
+**Readiness verdict: CONCERNS for whole-product/acceptance.** Preserve Story 13.2 create as blocked: its final retained check:all failed on the fixed database batch-3 budget; the snapshot transport remedy was insufficient. No new canonical pass is claimed. A genuine adopted verifier remedy and all required current-source lanes must pass before any new local implementation acceptance; preserve existing cases/floors/bounds and original failed evidence. Retained timing inspection can propose one bounded remedy without a blind rerun.
+
+**Next named local gate:** finalize 4.5 strict transport/DTO/SQL mapping under curator-batch-v1, then observe the absent-surface restricted-DB/HTTP frozen 25-item multi-page/revision-drift RED with machine decision denial. Later adapters/UI depend on that contract, not unfinished work plane/desktop. The admitted contract/RED work does not waive a shared failing acceptance lane.
+
+Installed-client integration, actual-human usability, deployed/hosted/rollback/platform acceptance and existing 6.5/9.4 remain open. Semantic promotion policy and grants remain unchanged. No general executor, scheduler/catch-up or desktop trigger is assumed. Operational status remains unknown; these are plans/evidence, not a live board.
+
+The older reset-era frontmatter/current-Epic-1/next-1.2 wording below is historical where superseded. Preserve actual accepted implementation and new controlling priority rather than restarting those stories. Sprint-planning customization is readiness-only; do not generate a sprint-status YAML or infer live transitions from this file.
 
 ## Controlling bounded readiness amendment — 2026-10-31
 
