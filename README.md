@@ -12,7 +12,16 @@ You host Allura on systems you control. It is a memory service with a web dashbo
 
 [How it works](#how-it-works) · [What you can do](#what-you-can-do) · [For developers](#for-developers) · [Project status](#project-status)
 
-> **Development preview—not a production release.** This guide describes the rebuilt source. Local tests pass, and hosted setup, real-user checks, and operational release checks are still open. Use `beta` for this rebuild; `main` and the older hosted service may differ.
+> **Beta 2: ready to begin bounded story development, not a finished product or production release.** Use **`beta-v2`**. The pinned developer toolchain, locked packages and selected upstream source checkouts are prepared. The inherited full database lane is incomplete; hosted CI and real-user acceptance are not claimed green. `main`, `beta` and the older hosted service are separate targets.
+
+## Beta 2 scope
+
+- **Local first:** the product must work without Cloudflare. Cloud deployment is an option, not a requirement for home use.
+- **Two current human users:** personal/home and business workspaces, explicit sharing, and no silent merging of spaces. Qualification for at least 150 users remains a future requirement, not a proven capacity or concurrency claim.
+- **Preserve the existing UX:** retain Allura's dashboard, navigation, history and brand while fixing the failed paths. Ordinary users should not need CLI commands, JSON or internal IDs for normal dashboard tasks.
+- **RuVector-first reuse:** qualify existing storage, retrieval and UI components rather than regenerate everything. PostgreSQL remains the authority for records, permissions, review and history.
+- **Keep human review:** selecting a source does not grant authority to act on it. If no eligible independent human reviewer is available, a proposal remains pending.
+- **Notion is a plan backup only:** it is not an application dependency, runtime connector or permission authority.
 
 ## Why use it?
 
@@ -46,7 +55,7 @@ Allura tracks sources and decisions. It does **not** promise that every source, 
 
 ## What you can do
 
-These features exist in the local rebuild. They are not a claim of a finished hosted release.
+The inherited source contains the areas below. Beta 2 must qualify them against its own stories and real-user acceptance; their presence is not proof that the new beta is complete or usable end to end.
 
 | Feature | What it helps you do |
 | --- | --- |
@@ -61,7 +70,7 @@ These features exist in the local rebuild. They are not a claim of a finished ho
 
 ## For developers
 
-The current implementation lives in [`foundation/`](foundation/). It uses TypeScript, Bun, PostgreSQL, and RuVector. Packages are private development builds, not published npm releases.
+The inherited implementation lives in [`foundation/`](foundation/). It uses TypeScript, Bun, PostgreSQL, and RuVector. Packages are private development builds, not published npm releases. Start with the current section of [DEVELOPMENT.md](DEVELOPMENT.md); its older local-development section is historical, not a direction to switch checkouts.
 
 ### Start with a source checkout
 
@@ -69,24 +78,62 @@ Use the rebuilt source that includes `foundation/core-package/` and `foundation/
 
 **Toolchain:** Git, **Bun 1.3.14**, and **Node.js 24.19.0**. The project checks these exact runtime versions. Linux is the tested platform for the packaged runtime and secure-store client. Some unit tests require Linux Secret Service, `secret-tool`, GNOME Keyring, D-Bus, `flock`, and `/usr/bin/gdbus`. On Ubuntu, `gdbus` is supplied by `libglib2.0-bin`; package names differ across distributions. The tests create their own private D-Bus session, keyring, runtime directory and environment, so they need these installed executables—not a logged-in desktop session or access to your existing keyring. The [persistent-client prerequisites](foundation/consumer-package/README.md#persistent-linux-device-sdk) describe the separate session setup for real client use.
 
-Clone the rebuild branch, then enter its source directory:
+Provision the exact tools first. The process-local launcher expects the directory layout documented in [DEVELOPMENT.md](DEVELOPMENT.md), or an existing `ALLURA_TOOLCHAIN_ROOT` with that layout. It validates the tools; it does **not** download them or replace your global Node installation.
+
+Clone Beta 2, then run these commands from the repository root:
 
 ```bash
-git clone --branch beta https://github.com/Allura-Ecosystem/Allura_Memory.git
-cd Allura_Memory/foundation
-bun run install:frozen
-bun scripts/prepare-model.ts # Explicit public model download and CPU inference
-bun run check
+git clone --branch beta-v2 https://github.com/Allura-Ecosystem/Allura_Memory.git
+cd Allura_Memory
+sh foundation/scripts/with-toolchain.sh
+sh foundation/scripts/with-toolchain.sh bun run install:frozen
 ```
 
-Already have the repository? Run the last three commands from its `foundation/` directory; model preparation is needed if the pinned model files are not present in this checkout’s `foundation/node_modules/.cache/allura-models`. The pinned model identity is defined in [`foundation/src/embedding.ts`](foundation/src/embedding.ts). A cache belonging to another tool or checkout does not automatically satisfy this requirement; if this checkout’s cache is removed when rebuilding `node_modules`, prepare it again.
+Already have the repository? Use a clean `beta-v2` checkout and run the last two commands from its root. Do not discard private plans or unfinished work to make an existing checkout clean. The launcher changes to `foundation/` itself.
 
-`install:frozen` installs the locked dependencies without package lifecycle scripts. The separate `prepare-model.ts` step downloads the pinned public MiniLM model, exercises CPU inference, and refuses nonempty `HF_TOKEN` and `HF_ACCESS_TOKEN` environment variables. Unit tests require that prepared native model and the Linux keyring prerequisites above; inference during checks is offline and does not download missing model files. `check` runs unit tests, TypeScript checks, and linting. These commands validate code; they do not start the app.
+Prepare the public local model only if the pinned files are missing from this checkout:
+
+```sh
+env -u HF_TOKEN -u HF_ACCESS_TOKEN sh foundation/scripts/with-toolchain.sh bun scripts/prepare-model.ts
+```
+
+The pinned model identity is defined in [`foundation/src/embedding.ts`](foundation/src/embedding.ts). A cache belonging to another tool or checkout does not automatically satisfy this requirement; prepare it again if rebuilding `node_modules` removes this checkout's cache.
+
+`install:frozen` installs the locked dependencies without package lifecycle scripts. The separate `prepare-model.ts` step downloads the pinned public MiniLM model, exercises CPU inference, and refuses nonempty `HF_TOKEN` and `HF_ACCESS_TOKEN` environment variables. Unit tests require that prepared native model and the Linux keyring prerequisites above; inference during checks is offline and does not download missing model files. None of these setup commands starts or deploys the app.
+
+### Reusable upstream source
+
+The preparation workspace has separate, pinned **sparse Git checkouts** of the following repositories. These are selected source inputs, not forks, bundled source, or six newly installed application platforms. Cloning Allura does not fetch them automatically.
+
+| Repository | Pinned source commit | Intended use |
+| --- | --- | --- |
+| [RuVector](https://github.com/ruvnet/RuVector) | `f39d6b001cd341f85e1cbcbdda32c020be013cc0` | Storage/retrieval and selected graph, filter and metrics UI source |
+| [AgentDB](https://github.com/ruvnet/agentdb) | `cd98bdbc4e0b2f0855a3994afb26eee93dd938b4` | Narrow retrieval/ranking/evaluation reuse |
+| [agenticow](https://github.com/ruvnet/agenticow) | `0830fbbedbe5449f3ca0766d43fd48f3dc77be61` | Later isolated experiment mechanics |
+| [Ruflo](https://github.com/ruvnet/ruflo) | `09bd1bf304cf1906729f8cca66460549d78b1f89` | Selected capability/host boundary patterns, not a replacement host |
+| [MetaHarness](https://github.com/ruvnet/metaharness) | `574ce3b881e902d23472a541f9f9e2fdccfa63db` | Adapter, default-deny and release/witness patterns |
+| [agentic-flow](https://github.com/ruvnet/agentic-flow) | `fed69f498c0f350f26e37b3e33ab57b1e327a26f` | Optional later pattern comparison; license disposition required before copying |
+
+The owning story must qualify the exact API, package/native compatibility, license and permission boundary before adoption. A fetched repository is not an accepted runtime dependency. Do not install entire upstream agent platforms, execute their setup hooks, replace the existing agent host, or add LangChain merely because examples use them. Fork only when maintaining upstream changes requires it.
+
+### Checks for the change you are making
+
+Do not rerun unchanged broad suites simply to begin a story. Run the checks relevant to the changed behavior, then the required integration/release gates at their proper stage. Keep known baseline failures visible; do not skip required cases or change deadlines to manufacture a pass.
+
+From the repository root:
+
+```sh
+sh foundation/scripts/with-toolchain.sh bun run typecheck
+sh foundation/scripts/with-toolchain.sh bun run lint
+sh foundation/scripts/with-toolchain.sh bun run test
+```
+
+`test` is the canonical unit lane, not a single-story test. Choose focused controls where the story supports them. `check` combines the unit lane, TypeScript checks and linting.
 
 ### Run the full local checks
 
-```bash
-bun run check:all
+```sh
+sh foundation/scripts/with-toolchain.sh bun run check:all
 ```
 
 This adds database and browser integration tests. It needs Docker and the native model, browser, scanner, and Linux keyring test dependencies. Read the [database test harness](foundation/scripts/test-db.ts) before running it. Use an isolated development environment, not a live database. A passing run is not production approval.
@@ -116,9 +163,13 @@ PostgreSQL holds the lasting records, review state, and version history. RuVecto
 
 ## Project status
 
-The local rebuild includes the core service, clients, dashboard, optional modules, and memory experiments. Automated tests have exercised these features with isolated data and test identities.
+**Developer preparation completed:** the `beta-v2` setup commit was pushed with upstream tracking verified. A separate clean coding checkout has all 19 direct package pins installed with the lockfile unchanged, plus verified public model/scanner caches. Six pinned upstream source checkouts are prepared separately. The first bounded story is **V2-E01-S01**; preparation does not mark that story complete.
 
-**Still open before release:** hosted setup, real-user and accessibility checks, operational recovery checks, and separately approved transfers to outside systems. An earlier backup-restore test failure has not been explained, even though later runs passed. Better error reporting is now in place.
+**Existing evidence, not a new full acceptance run:** the canonical unit lane passed 221 cases across 33 suites. Toolchain, typecheck, lint, native RuVector, offline model and headless-browser prerequisite checks passed. The full database lane exited unsuccessfully: its first two completed reports contain 322 passing cases, but the required third-batch completion report is missing. This inherited failure remains open; partial results are not a green baseline.
+
+**Hosted CI:** the setup-only preparation commit intentionally skipped a repeated automatic full run. Hosted CI is not claimed green; normal future story CI gates remain configured. A source push does not deploy the application.
+
+**Still open before release:** Beta 2 story implementation and acceptance, the incomplete database lane, exact-revision integrated/hosted CI, genuine local human sessions and nontechnical dashboard journeys, accessibility, recovery/update checks, and any chosen cloud deployment qualification. Earlier unexplained backup/restore failures remain historical evidence, not erased by later passing runs. No 150-user capacity, Vercel deployment, production-readiness or compliance acceptance is asserted.
 
 Local completion is not the same as a published release. There is no production-readiness or compliance claim. The roadmap also includes deferred work that is not shipped.
 
@@ -131,10 +182,11 @@ Local completion is not the same as a published release. There is no production-
 | [`foundation/tests/`](foundation/tests/) | Unit, database, client, and browser tests |
 | [`foundation/core-package/`](foundation/core-package/) | Packaged runtime guide and metadata |
 | [`foundation/consumer-package/`](foundation/consumer-package/) | SDK, CLI, and MCP package guide |
-| [`_bmad-output/planning-artifacts/architecture.md`](_bmad-output/planning-artifacts/architecture.md) | Rebuild architecture and technical rules |
-| [`_bmad-output/planning-artifacts/epics.md`](_bmad-output/planning-artifacts/epics.md) | Planned scope and acceptance criteria |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Current Beta 2 tooling and isolated-check instructions; older target clearly separated |
+| [`_bmad-output/planning-artifacts/architecture.md`](_bmad-output/planning-artifacts/architecture.md) | Inherited architecture reference, not automatic Beta 2 acceptance |
+| [`_bmad-output/planning-artifacts/epics.md`](_bmad-output/planning-artifacts/epics.md) | Historical scope reference, not the active Beta 2 story queue |
 
-Older designs and previews remain in the repository. They are references, not proof that a feature is available in the current runtime.
+The active Beta 2 brief, PRD and story set are maintained in the separate planning workspace, with Notion as a backup. They are not bundled into this public setup commit. Do not resume the historical story queue merely because its files are present. Older designs and previews remain references, not proof that a feature is available in the current runtime.
 
 ## Contributing
 
