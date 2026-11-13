@@ -1,0 +1,663 @@
+--- a/src/mcp/canonical-tools.ts
++++ b/src/mcp/canonical-tools.ts
+@@ -8,7 +8,7 @@
+  *
+  * Operations:
+  * 1. memory_add    - Add a memory (episodic → score → promote/queue)
+- * 2. memory_search  - Search memories (RuVector primary → Neo4j fallback → PG traces)
++ * 2. memory_search  - Search authorized PostgreSQL episodic and RuVector graph records
+  * 3. memory_get     - Get a single memory by ID
+  * 4. memory_list    - List all memories for a user
+  * 5. memory_delete  - Soft-delete a memory
+@@ -40,7 +40,7 @@
+ import { createProposalDedupChecker, getDedupThreshold, type ProposalCandidate } from "@/lib/dedup/proposal-dedup"
+ import { tenantQuery } from "@/lib/db/tenant-transaction"
+ import { classifyPostgresError, DatabaseQueryError, DatabaseUnavailableError } from "@/lib/errors/database-errors"
+-import { createGraphAdapter } from "@/lib/graph-adapter"
++import { createGraphAdapter, getGraphBackend } from "@/lib/graph-adapter"
+ import {
+   MemoryAlreadyCanonicalError,
+   MemoryNotDeletedError,
+@@ -79,7 +79,7 @@
+   StorageLocation,
+ } from "@/lib/memory/canonical-contracts"
+ import { storeMemory } from "@/lib/ruvector/bridge"
+-import { searchWithFeedback } from "@/lib/ruvector/retrieval-adapter"
++import { deterministicSearch } from "./canonical-tools/deterministic-search"
+ import { requireTransportMemoryAddAuthority } from "@/lib/auth/mcp-authenticator"
+ import {
+   checkBudget,
+@@ -391,341 +391,14 @@
+   }
+ }
+ 
+-/**
+- * 2. memory_search
+- *
+- * Search approved knowledge by default. Explicit all-mode collects bounded
+- * RuVector, graph and raw-event candidates before selecting the final results.
+- */
++/** Search authorized episodic and semantic records with stable lexical ranking. */
+ export async function memory_search(request: MemorySearchRequest): Promise<MemorySearchResponse> {
+-  // Validate
+-  const groupId = validateGroupId(request.group_id)
+-  const retrievalStatus = request.status || "approved" // Default: approved-only retrieval
+-  const includeAllEvidence = retrievalStatus === "all"
+-  if (includeAllEvidence && request.limit !== undefined && (
+-    typeof request.limit !== "number" || !Number.isFinite(request.limit) || request.limit < 1 || request.limit > 100
+-  )) {
+-    throw new Error("limit must be a finite number between 1 and 100")
+-  }
+-  const limit = Math.floor(request.limit || 10)
+-  const startTime = Date.now()
+-
+-  // Scope was injected from a verified MCP principal at the transport boundary.
++  validateGroupId(request.group_id)
+   const scope = requireVerifiedWorkspaceScope(request)
+-  console.log(`[memory_search] scope: group=${groupId} project=${scope.project_id || "none"} agent=${scope.agent_id || "none"} session=${scope.session_id || "none"} status=${retrievalStatus}`)
+-
+-  // ── Approved-only filter ──────────────────────────────────────────────────
+-  // When status is 'approved' (default), skip episodic stores and return only
+-  // canonical Neo4j insights. This prevents unapproved traces from polluting
+-  // production reasoning.
+-  if (retrievalStatus === "approved") {
+-    return searchApprovedOnly(request, groupId, limit, startTime, scope)
+-  }
+-
+-  const storesUsed: Array<"postgres" | "neo4j" | "ruvector" | "graph"> = []
+-  const storesAttempted: MemoryResponseMeta["stores_attempted"] = []
+-  const warnings: string[] = []
+-  let searchMeta = baseMeta([])
+-
+-  // ── STEP 1: Primary search — RuVector (episodic hybrid: vector + BM25) ─────────
+-  let ruvectorResults: Array<{
+-    id: MemoryId
+-    content: MemoryContent
+-    score: ConfidenceScore
+-    provenance: MemoryProvenance
+-    created_at: string
+-    usage_count: number
+-    tags: string[]
+-  }> = []
+-  let ruvectorTrajectoryId: string | undefined
+-
+-  storesAttempted.push("ruvector")
+-  try {
+-    const ruvectorResult = await searchWithFeedback(groupId, request.query, {
+-      limit: includeAllEvidence ? limit : request.limit ?? 10,
+-      threshold: 0.3, // Lower threshold for recall
+-    })
+-
+-    ruvectorTrajectoryId = ruvectorResult.trajectoryId
+-    ruvectorResults = ruvectorResult.memories.slice(0, includeAllEvidence ? limit : undefined).map((m) => ({
+-      id: m.id as MemoryId,
+-      content: m.content as MemoryContent,
+-      score: m.score as ConfidenceScore,
+-      provenance: "conversation" as MemoryProvenance, // RuVector stores episodic
+-      created_at: new Date().toISOString(), // Bridge doesn't return created_at
+-      usage_count: 0,
+-      tags: [],
+-    }))
+-
+-    if (ruvectorResults.length > 0) {
+-      storesUsed.push("ruvector")
+-    }
+-  } catch (ruvectorErr) {
+-    // RuVector failure — log warning and continue to fallback
+-    const msg = ruvectorErr instanceof Error ? ruvectorErr.message : String(ruvectorErr)
+-    console.warn("[memory_search] RuVector primary search failed:", msg)
+-    warnings.push(`ruvector_unavailable: ${msg}`)
+-  }
+-
+-  // ── STEP 2: Graph candidates (independent budget in explicit all-mode) ──────
+-  let semanticResults: Array<{
+-    id: MemoryId
+-    content: string
+-    score: number
+-    provenance: MemoryProvenance
+-    created_at: string
+-    usage_count: number
+-    relevance: number
+-    tags: string[]
+-  }> = []
+-
+-  if (includeAllEvidence || ruvectorResults.length < limit) {
+-    storesAttempted.push("graph")
+-    try {
+-      const { pg, neo4j: neo4jDriver } = await getConnections()
+-      const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
+-      const graphResults = await graphAdapter.searchMemories({
+-        query: request.query,
+-        group_id: groupId,
+-        workspace_id: scope.workspace_id,
+-        principal_id: scope.agent_id,
+-        limit: includeAllEvidence ? limit : limit - ruvectorResults.length,
+-      })
+-
+-      semanticResults = graphResults.slice(0, includeAllEvidence ? limit : undefined).map((item) => ({
+-        id: item.id,
+-        content: item.content,
+-        score: item.score,
+-        provenance: item.provenance,
+-        created_at: item.created_at,
+-        usage_count: item.usage_count,
+-        tags: item.tags,
+-        relevance: item.relevance,
+-      }))
+-
+-      if (semanticResults.length > 0) {
+-        storesUsed.push("graph")
+-      }
+-    } catch (error) {
+-      console.warn("[degraded] Graph adapter fallback unavailable in memory_search:", error)
+-      warnings.push("graph_unavailable")
+-    }
+-  }
+-
+-  // ── STEP 3: Raw events remain eligible even when other stores fill capacity ─
+-  let episodicResults: Array<{
+-    id: MemoryId
+-    content: MemoryContent
+-    score: ConfidenceScore
+-    provenance: MemoryProvenance
+-    created_at: string
+-    usage_count: number
+-    tags: string[]
+-  }> = []
+-
+-  const totalSoFar = ruvectorResults.length + semanticResults.length
+-  if (includeAllEvidence || totalSoFar < limit) {
+-    storesAttempted.push("postgres")
+-    try {
+-      const { pg } = await getConnections()
+-      const result = await tenantPgQuery<EpisodicMemoryRow>(
+-        groupId, scope.agent_id, pg,
+-        `SELECT metadata->>'memory_id' AS id, metadata->>'content' AS content, 
+-              metadata->>'source' AS provenance,
+-              metadata->>'tags' AS tags,
+-              created_at
+-       FROM events
+-      WHERE group_id = $1
+-        AND event_type = 'memory_add'
+-        AND ($2::text IS NULL OR metadata->>'user_id' = $2)
+-        AND metadata->>'content' ILIKE '%' || $3 || '%'
+-      ORDER BY created_at DESC
+-      LIMIT $4`,
+-        [groupId, request.user_id || null, request.query, includeAllEvidence ? limit : limit - totalSoFar],
+-        scope.workspace_id
+-      )
+-
+-      episodicResults = result.rows.slice(0, includeAllEvidence ? limit : undefined).map((row) => ({
+-        id: toMemoryId(row.id),
+-        content: row.content,
+-        score: 0.5, // Episodic without embedding scores lower
+-        provenance: toProvenance(row.provenance),
+-        created_at: row.created_at,
+-        usage_count: 0,
+-        tags: parseEpisodicTags(row.tags),
+-      }))
+-
+-      if (episodicResults.length > 0) {
+-        storesUsed.push("postgres")
+-      }
+-    } catch (error) {
+-      console.warn("[degraded] PostgreSQL fallback unavailable in memory_search:", error)
+-      warnings.push("postgres_unavailable")
+-    }
+-  }
+-
+-  // ── STEP 4: Merge results ────────────────────────────────────────────────────
+-  const semantic = semanticResults.map((item) => ({
+-    id: item.id,
+-    content: item.content,
+-    score: item.score,
+-    source: "semantic" as const,
+-    provenance: item.provenance,
+-    created_at: item.created_at,
+-    usage_count: item.usage_count,
+-    tags: item.tags,
+-  }))
+-
+-  const episodic = episodicResults.map((item) => ({
+-    ...item,
+-    source: "episodic" as const,
+-  }))
+-
+-  const ruvector = ruvectorResults.map((item) => ({
+-    ...item,
+-    source: "episodic" as const, // RuVector stores episodic memories
+-  }))
+-
+-  // AD-70: confidence is not query relevance. Literal priority is internal;
+-  // returned scores retain their source values and never bypass min_score.
+-  const normalizedQuery = includeAllEvidence ? request.query.trim().toLowerCase() : ""
+-  const literalRank = (content: string): number => {
+-    if (!normalizedQuery) return 0
+-    const normalizedContent = content.trim().toLowerCase()
+-    if (normalizedContent === normalizedQuery) return 2
+-    return normalizedContent.includes(normalizedQuery) ? 1 : 0
+-  }
+-  const candidates = [
+-    ...ruvector.map((memory) => ({ memory, store: "ruvector" as const })),
+-    ...semantic.map((memory) => ({ memory, store: "graph" as const })),
+-    ...episodic.map((memory) => ({ memory, store: "postgres" as const })),
+-  ]
+-  const byId = new Map<string, (typeof candidates)[number]>()
+-  for (const candidate of candidates) {
+-    if (includeAllEvidence && request.min_score !== undefined && candidate.memory.score < request.min_score) continue
+-    const previous = byId.get(candidate.memory.id)
+-    if (!previous) {
+-      byId.set(candidate.memory.id, candidate)
+-      continue
+-    }
+-    if (!includeAllEvidence) continue
+-    const rankDifference = literalRank(candidate.memory.content) - literalRank(previous.memory.content)
+-    const sameContent = candidate.memory.content === previous.memory.content
+-    if (sameContent && candidate.store === "postgres" && previous.store === "ruvector") {
+-      // Enrich the already-scored result; raw metadata must not erase its score.
+-      // PG owns metadata after this first/newest event, preventing older overwrites.
+-      byId.set(candidate.memory.id, {
+-        ...candidate,
+-        memory: {
+-          ...previous.memory,
+-          provenance: candidate.memory.provenance,
+-          created_at: candidate.memory.created_at,
+-          tags: candidate.memory.tags,
+-        },
+-      })
+-    } else if (rankDifference > 0) {
+-      byId.set(candidate.memory.id, candidate)
+-    }
+-  }
+-  const combined = [...byId.values()]
+-    .map(({ memory }) => memory)
+-    .sort((a, b) => literalRank(b.content) - literalRank(a.content) || b.score - a.score)
+-    .slice(0, limit)
+-
+-  const latency = Date.now() - startTime
+-
+-  // Build final metadata
+-  searchMeta = {
+-    ...searchMeta,
+-    // This function's warnings are exclusively failed source attempts.
+-    ...(includeAllEvidence ? { degraded: warnings.length > 0, stores_attempted: storesAttempted } : {}),
+-    stores_used: storesUsed.length > 0 ? storesUsed : ([] as Array<"postgres" | "neo4j" | "ruvector">),
+-    ...(warnings.length > 0 ? { warnings } : {}),
+-    ...(ruvectorTrajectoryId !== undefined
+-      ? { ruvector_trajectory_id: ruvectorTrajectoryId, ruvector_count: ruvectorResults.length }
+-      : {}),
+-  }
+-
+-  return {
+-    results: combined,
+-    count: combined.length,
+-    latency_ms: latency,
+-    meta: searchMeta,
+-  }
+-}
+-
+-/**
+- * Approved-only search — returns only canonical Neo4j insights.
+- * Used when status filter is 'approved' (the default).
+- * Falls back to native memory_search if Neo4j is unavailable.
+- */
+-async function searchApprovedOnly(
+-  request: MemorySearchRequest,
+-  groupId: GroupId,
+-  limit: number,
+-  startTime: number,
+-  scope: ScopeTuple & { workspace_id: string; agent_id: string }
+-): Promise<MemorySearchResponse> {
+-  try {
+-    const { pg, neo4j: neo4jDriver } = await getConnections()
+-    const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
+-
+-    const graphResults = await graphAdapter.searchMemories({
+-      query: request.query,
+-      group_id: groupId,
+-      workspace_id: scope.workspace_id,
+-      principal_id: scope.agent_id,
+-      limit,
+-    })
+-
+-    const results = graphResults.map((item) => ({
+-      id: item.id,
+-      content: item.content,
+-      score: item.score,
+-      source: "semantic" as StorageLocation,
+-      provenance: item.provenance,
+-      created_at: item.created_at,
+-      usage_count: item.usage_count,
+-      tags: item.tags,
+-    }))
+-
+-    const elapsed = Date.now() - startTime
+-    console.log(
+-      `[memory_search:approved] ${results.length} approved insights for "${request.query}" in ${elapsed}ms`
+-    )
+-
+-    return {
+-      results,
+-      count: results.length,
+-      latency_ms: elapsed,
+-      meta: {
+-        contract_version: "v1",
+-        degraded: false,
+-        stores_used: ["graph"],
+-        stores_attempted: ["graph"],
+-        warnings: [],
+-      },
+-    }
+-  } catch (error) {
+-    const elapsed = Date.now() - startTime
+-    const msg = error instanceof Error ? error.message : String(error)
+-    console.warn(`[memory_search:approved] Neo4j unavailable (${elapsed}ms): ${msg}`)
+-
+-    // Return explicit no_approved_memory — NOT silent empty array
+-    return {
+-      results: [],
+-      count: 0,
+-      latency_ms: elapsed,
+-      meta: {
+-        contract_version: "v1",
+-        degraded: true,
+-        degraded_reason: "graph_unavailable",
+-        stores_used: [],
+-        stores_attempted: ["graph"],
+-        warnings: [`no_approved_memory: graph backend unavailable — ${msg}`],
+-      },
+-    }
+-  }
++  return deterministicSearch(request, async (sql, values) => {
++    const { pg } = await getConnections()
++    return tenantPgQuery(request.group_id, scope.agent_id, pg, sql, values, scope.workspace_id)
++  }, getGraphBackend())
+ }
+ 
+ /**
+--- a/src/mcp/canonical-http-gateway.ts
++++ b/src/mcp/canonical-http-gateway.ts
+@@ -359,7 +359,7 @@
+       {
+         name: "memory_search",
+         description:
+-          "Search memories across both stores (PostgreSQL + Neo4j). Federated search with results merged by relevance.",
++          "Search authorized PostgreSQL episodic and RuVector graph memories by ID, phrase, and keywords. Stable ranking; response metadata reports incomplete coverage. No embedding is required.",
+         inputSchema: {
+           type: "object",
+           properties: {
+@@ -406,7 +406,7 @@
+       },
+       {
+         name: "memory_delete",
+-        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks Neo4j node as deprecated.",
++        description: "Soft-delete a memory. Appends deletion event to PostgreSQL and marks PostgreSQL/RuVector graph node as deprecated.",
+         inputSchema: {
+           type: "object",
+           properties: {
+@@ -436,7 +436,7 @@
+       {
+         name: "memory_update",
+         description:
+-          "Append-only versioned update. Creates new version in Neo4j with SUPERSEDES relationship, marks old version deprecated. Audit event always written to PostgreSQL.",
++          "Append-only versioned update. Creates new version in PostgreSQL/RuVector graph with SUPERSEDES relationship, marks old version deprecated. Audit event always written to PostgreSQL.",
+         inputSchema: {
+           type: "object",
+           properties: {
+@@ -461,13 +461,13 @@
+       {
+         name: "memory_export",
+         description:
+-          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only Neo4j (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
++          "Export memories filtered by group_id and optional canonical status. canonical_only=true returns only PostgreSQL/RuVector graph (semantic) memories; canonical_only=false returns both stores merged and deduplicated.",
+         inputSchema: {
+           type: "object",
+           properties: {
+             group_id: { type: "string", description: "Required: Tenant namespace (format: allura-*)" },
+             user_id: { type: "string", description: "Optional: User identifier filter" },
+-            canonical_only: { type: "boolean", description: "Optional: Export only canonical (Neo4j) memories (default: false)" },
++            canonical_only: { type: "boolean", description: "Optional: Export only canonical (PostgreSQL/RuVector graph) memories (default: false)" },
+             limit: { type: "number", description: "Optional: Maximum memories to export (default: 1000, max: 10000)" },
+             offset: { type: "number", description: "Optional: Pagination offset" },
+           },
+@@ -477,7 +477,7 @@
+       {
+         name: "memory_restore",
+         description:
+-          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in Neo4j and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
++          "Restore a soft-deleted memory within the 30-day recovery window. Removes deprecated flag in PostgreSQL/RuVector graph and cleans up SUPERSEDES relationships. Appends restore event to PostgreSQL (append-only).",
+         inputSchema: {
+           type: "object",
+           properties: {
+@@ -1285,7 +1285,7 @@
+     return;
+   }
+ 
+-  // ── Readiness probe — checks PostgreSQL, Neo4j, MCP initialization ────────
++  // ── Readiness probe — checks PostgreSQL, PostgreSQL/RuVector graph, MCP initialization ────────
+   if (url.pathname === "/ready" || url.pathname === "/api/ready") {
+     const result = await checkReadiness();
+     const statusCode = result.ready ? 200 : 503;
+@@ -1338,7 +1338,7 @@
+   console.log("Transports:");
+   console.log("  MCP Streamable HTTP:  POST/GET/DELETE /mcp  (primary — OpenAI Agents SDK compatible)");
+   console.log("  Health:                GET /health");
+-  console.log("  Readiness:            GET /ready  (checks PostgreSQL, Neo4j, MCP)");
++  console.log("  Readiness:            GET /ready  (checks PostgreSQL, PostgreSQL/RuVector graph, MCP)");
+   console.log("  Liveness:             GET /live   (process heartbeat)");
+   console.log("  Metrics:              GET /metrics (Prometheus format, auth required)");
+   console.log("  Admin Reset Budget:   POST /api/admin/reset-budget (auth required, body: {group_id?})");
+--- a/src/lib/memory/canonical-contracts.ts
++++ b/src/lib/memory/canonical-contracts.ts
+@@ -75,6 +75,12 @@
+ export type MemoryStatus = "active" | "deprecated"
+ 
+ export interface MemoryResponseMeta {
++  covered_sources?: string[]
++  coverage_limitations?: string[]
++  incomplete?: boolean
++  retrieval_config_version?: string
++  index_revision?: string | null
++  data_revision?: string | null
+   contract_version: "v1"
+   degraded: boolean
+   degraded_reason?: "neo4j_unavailable" | "graph_unavailable"
+@@ -191,7 +197,7 @@
+  * 2. memory_search
+  *
+  * Search memories across both stores.
+- * Federated search: PostgreSQL (episodic) + Neo4j (semantic).
++ * Federated lexical search: PostgreSQL events + PostgreSQL/RuVector semantic graph.
+  * Results merged by relevance score.
+  */
+ export interface MemorySearchRequest {
+@@ -204,7 +210,7 @@
+   /** Optional: Scope tuple for governed retrieval (project/agent/session) */
+   scope?: ScopeTuple
+ 
+-  /** Optional: Filter by memory status (default: 'approved' — only approved insights) */
++  /** Optional: Filter by memory status (default: 'all'; approved selects semantic only) */
+   status?: MemoryRetrievalStatus
+ 
+   /** Optional: User identifier (scope to user) */
+@@ -221,6 +227,15 @@
+ }
+ 
+ export interface MemorySearchResult {
++  version?: number
++  relevance?: number
++  relationships?: Array<{
++    type: 'supersedes'
++    newer_id: string
++    predecessor_id: string
++    newer: MemorySearchResult
++    predecessor: MemorySearchResult
++  }>
+   /** Memory identifier */
+   id: MemoryId
+ 
+--- /dev/null
++++ b/src/mcp/canonical-tools/deterministic-search.ts
+@@ -0,0 +1,162 @@
++import type { MemorySearchRequest, MemorySearchResponse, MemorySearchResult } from '../../lib/memory/canonical-contracts'
++
++export const RETRIEVAL_CONFIG = 'pg-scoped-lexical-v1'
++// No embedding dependency or query-time timestamps. Literal matching uses strpos,
++// so %, _ and backslashes are data, never LIKE wildcards.
++export const EPISODIC_SQL = `
++WITH records AS (
++ SELECT DISTINCT ON (e.metadata->>'memory_id')
++   e.metadata->>'memory_id' AS id, e.metadata->>'content' AS content,
++   0.5::float8 AS score, e.metadata->>'source' AS provenance,
++   e.created_at, 1 AS version, e.metadata->'tags' AS tags,
++   'episodic'::text AS source
++ FROM events e
++ WHERE e.group_id=$1 AND e.workspace_id=$2
++   AND e.event_type='memory_add' AND e.metadata->>'user_id'=$3
++   AND e.metadata->>'memory_id' IS NOT NULL
++   AND NOT EXISTS (
++     SELECT 1 FROM events d WHERE d.group_id=$1 AND d.workspace_id=$2
++       AND d.metadata->>'memory_id'=e.metadata->>'memory_id'
++       AND d.metadata->>'user_id'=$3 AND d.event_type='memory_delete'
++       AND NOT EXISTS (SELECT 1 FROM events r
++         WHERE r.group_id=$1 AND r.workspace_id=$2
++           AND r.metadata->>'memory_id'=d.metadata->>'memory_id'
++           AND r.metadata->>'user_id'=$3 AND r.event_type='memory_restore'
++           AND r.created_at>d.created_at))
++ ORDER BY e.metadata->>'memory_id', e.created_at ASC, e.id ASC
++), ranked AS (
++ SELECT *, CASE WHEN lower(id)=lower($4) THEN 3.0
++   WHEN strpos(lower(content),lower($4))>0 THEN 2.0
++   ELSE ts_rank(to_tsvector('english',content),plainto_tsquery('english',$4)) END AS relevance
++ FROM records WHERE lower(id)=lower($4) OR strpos(lower(content),lower($4))>0
++   OR to_tsvector('english',content) @@ plainto_tsquery('english',$4)
++)
++SELECT * FROM ranked WHERE score >= $5
++ORDER BY relevance DESC, created_at DESC, id COLLATE "C" ASC, version ASC LIMIT $6`
++
++export const SEMANTIC_SQL = `
++WITH ranked AS (
++ SELECT m.id::text, m.content, m.score, m.provenance, m.created_at,
++   m.version, m.tags, 'semantic'::text AS source,
++   CASE WHEN lower(m.id::text)=lower($4) THEN 3.0
++     WHEN strpos(lower(m.content),lower($4))>0 THEN 2.0
++     WHEN m.content_tsv @@ plainto_tsquery('english',$4)
++       THEN 1.0+ts_rank(m.content_tsv,plainto_tsquery('english',$4))
++     ELSE GREATEST(word_similarity($4,m.content),strict_word_similarity($4,m.content)) END AS relevance
++ FROM graph_memories m
++ WHERE m.group_id=$1 AND m.workspace_id=$2 AND m.workspace_scope_state='workspace_scoped'
++   AND ($7::boolean=false OR m.user_id=$3)
++   AND m.deleted_at IS NULL
++   AND (m.deprecated=false OR EXISTS (SELECT 1 FROM graph_supersedes s
++     WHERE s.group_id=$1 AND s.workspace_id=$2 AND s.workspace_scope_state='workspace_scoped'
++       AND s.superseded_id=m.id))
++   AND ($8::text <> 'approved' OR (m.deprecated=false AND NOT EXISTS (
++     SELECT 1 FROM graph_supersedes s WHERE s.group_id=$1 AND s.workspace_id=$2
++       AND s.workspace_scope_state='workspace_scoped' AND s.superseded_id=m.id)))
++   AND (lower(m.id::text)=lower($4) OR strpos(lower(m.content),lower($4))>0
++     OR m.content_tsv @@ plainto_tsquery('english',$4)
++     OR word_similarity($4,m.content)>=0.15 OR strict_word_similarity($4,m.content)>=0.15)
++)
++SELECT * FROM ranked WHERE score >= $5
++ORDER BY relevance DESC, created_at DESC, id COLLATE "C" ASC, version ASC LIMIT $6`
++
++// Read existing explicit edges only. Include both endpoints even when the old
++// wording does not match the query. Never infer an edge from dates or prose.
++export const HISTORY_SQL = `
++SELECT s.newer_id::text, s.superseded_id::text,
++ row_to_json(n) AS newer, row_to_json(p) AS predecessor
++FROM graph_supersedes s
++JOIN graph_memories n ON n.id=s.newer_id AND n.group_id=s.group_id AND n.workspace_id=s.workspace_id
++JOIN graph_memories p ON p.id=s.superseded_id AND p.group_id=s.group_id AND p.workspace_id=s.workspace_id
++WHERE s.group_id=$1 AND s.workspace_id=$2 AND s.workspace_scope_state='workspace_scoped'
++ AND n.workspace_scope_state='workspace_scoped' AND p.workspace_scope_state='workspace_scoped'
++ AND n.deleted_at IS NULL AND p.deleted_at IS NULL
++ AND ($4::boolean=false OR (n.user_id=$3 AND p.user_id=$3))
++ AND (s.newer_id::text=ANY($5::text[]) OR s.superseded_id::text=ANY($5::text[]))
++ORDER BY s.newer_id::text COLLATE "C", s.superseded_id::text COLLATE "C" LIMIT 201`
++
++type Row = Record<string, any>
++export type Execute = (sql: string, values: unknown[]) => Promise<{ rows: Row[] }>
++
++export function permissionDenied(error: unknown): boolean {
++ const seen = new Set<unknown>()
++ for (let e: any = error; e && !seen.has(e); e=e.cause) {
++   seen.add(e)
++   if (e.code === '42501' || String(e.code).startsWith('28') || e.status === 401 || e.status === 403
++     || /permission|forbidden|unauthori[sz]ed|access.denied/i.test(`${e.name || ''} ${e.message || ''}`)) return true
++ }
++ return false
++}
++
++function mapRow(row: Row): MemorySearchResult {
++ const timestamp = new Date(row.created_at)
++ if (!row.id || typeof row.content !== 'string' || !Number.isFinite(timestamp.getTime())
++   || !Number.isInteger(Number(row.version)) || Number(row.version)<1
++   || !Number.isFinite(Number(row.score))) throw new Error('invalid retrieval record')
++ let tags = row.tags
++ if (typeof tags === 'string') { try { tags = JSON.parse(tags) } catch { tags=[] } }
++ return {
++   id: row.id, content: row.content, score: Number(row.score), source: row.source,
++   provenance: row.provenance === 'manual' ? 'manual' : 'conversation',
++   created_at: timestamp.toISOString(), version: Number(row.version), usage_count: 0,
++   tags: Array.isArray(tags) ? tags.filter((t: unknown) => typeof t === 'string') : [],
++   relevance: Number(row.relevance || 0),
++ }
++}
++const cmp = (a: string,b: string) => a<b ? -1 : a>b ? 1 : 0
++export function mergeRows(rows: MemorySearchResult[], limit: number): MemorySearchResult[] {
++ const sorted = [...rows].sort((a,b) => (b.relevance! - a.relevance!)
++   || Date.parse(b.created_at)-Date.parse(a.created_at) || cmp(a.id,b.id)
++   || a.version!-b.version! || cmp(a.source,b.source) || cmp(a.content,b.content))
++ const seen = new Set<string>()
++ return sorted.filter(r => { const key=JSON.stringify([r.id,r.version]); if(seen.has(key)) return false; seen.add(key); return true }).slice(0,limit)
++}
++
++/** Caller supplies a transaction executor bound to verified tenant/workspace/principal. */
++export async function deterministicSearch(request: MemorySearchRequest, execute: Execute, backend: string): Promise<MemorySearchResponse> {
++ const start=Date.now(), scope=request.scope
++ if (!scope?.workspace_id || !scope.agent_id || scope.group_id!==request.group_id) throw new Error('verified MCP workspace scope is required')
++ if (request.user_id && request.user_id!==scope.agent_id) throw new Error('permission denied: principal mismatch')
++ if (typeof request.query!=='string' || !request.query.trim()) throw new Error('query must be nonempty')
++ const limit=request.limit ?? 10, min=request.min_score ?? 0
++ if (!Number.isInteger(limit) || limit<1 || limit>100) throw new Error('limit must be an integer between 1 and 100')
++ if (!Number.isFinite(min) || min<0 || min>1) throw new Error('min_score must be between 0 and 1')
++ const status=request.status ?? 'all'
++ if (!['all','approved','proposed','deprecated'].includes(status)) throw new Error('invalid retrieval status')
++ const warnings: string[] = [], covered: string[] = [], limitations: string[] = ['embedding_similarity_not_covered','index_revision_unavailable','data_revision_unavailable','episodic_relationships_not_available']
++ const stores: ('postgres'|'graph')[] = [], attempted: ('postgres'|'graph')[] = []
++ const values=[request.group_id,scope.workspace_id,scope.agent_id,request.query.trim(),min,limit+1]
++ let rows: MemorySearchResult[]=[]
++ async function source(name: 'postgres'|'graph',sql: string,args: unknown[]) {
++   attempted.push(name)
++   try {
++     const result=await execute(sql,args)
++     const mapped=result.rows.map(mapRow)
++     if(mapped.length>limit) limitations.push(`${name}_results_limited`)
++     rows.push(...mapped.slice(0,limit)); stores.push(name)
++     covered.push(name==='postgres'?'episodic_keyword':'semantic_keyword_fts_trigram')
++   } catch(error) { if(permissionDenied(error)) throw new Error('permission denied: retrieval stopped'); warnings.push(`${name}_unavailable`); limitations.push(`${name}_unavailable`) }
++ }
++ if(status!=='approved') await source('postgres',EPISODIC_SQL,values)
++ if(backend==='ruvector') await source('graph',SEMANTIC_SQL,[...values,!!request.user_id,status])
++ else { warnings.push('unsupported_graph_backend'); limitations.push('semantic_coverage_unavailable') }
++ if(request.include_global !== false) limitations.push('global_scope_not_expanded')
++ if(status==='proposed' || status==='deprecated') limitations.push('legacy_status_filter_not_supported')
++ const results=mergeRows(rows,limit)
++ if(stores.includes('graph') && results.length>0) {
++   try {
++     const history=await execute(HISTORY_SQL,[request.group_id,scope.workspace_id,scope.agent_id,!!request.user_id,results.map(r=>r.id)])
++     if(history.rows.length>200) limitations.push('history_results_limited')
++     for(const result of results) {
++       result.relationships=history.rows.slice(0,200).filter(e=>e.newer_id===result.id || e.superseded_id===result.id).map(e=>({
++         type:'supersedes' as const, newer_id:e.newer_id, predecessor_id:e.superseded_id,
++         newer:mapRow({...e.newer,source:'semantic'}), predecessor:mapRow({...e.predecessor,source:'semantic'}),
++       }))
++     }
++     covered.push('explicit_semantic_lineage')
++   } catch(error) { if(permissionDenied(error)) throw new Error('permission denied: retrieval stopped'); warnings.push('history_unavailable'); limitations.push('history_unavailable') }
++ }
++ return {results,count:results.length,latency_ms:Date.now()-start,meta:{contract_version:'v1',degraded:warnings.length>0,
++   stores_used:stores,stores_attempted:attempted,warnings,covered_sources:covered,coverage_limitations:limitations,
++   incomplete:true,retrieval_config_version:RETRIEVAL_CONFIG,index_revision:null,data_revision:null}}
++}
