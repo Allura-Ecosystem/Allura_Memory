@@ -1,0 +1,6 @@
+{
+  "src/mcp/canonical-tools.ts": "699f53e887142e6a0df86c60623d3273988e4072bcecd91383710caaecad6ea3",
+  "src/mcp/canonical-http-gateway.ts": "89140c6e2fffde41ddae6447f8b6df03ac5be592ded01b51140de611947b237f",
+  "src/lib/memory/canonical-contracts.ts": "f3fda371d0b0f47317f2f9223581fcda0ef51c64f7d67b50701fede71aee71e0",
+  "src/mcp/canonical-tools/deterministic-search.ts": null
+}
