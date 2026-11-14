@@ -1,0 +1,293 @@
+--- a/src/mcp/canonical-tools.ts
++++ b/src/mcp/canonical-tools.ts
+@@ -80,6 +80,7 @@
+ } from "@/lib/memory/canonical-contracts"
+ import { storeMemory } from "@/lib/ruvector/bridge"
+ import { deterministicSearch } from "./canonical-tools/deterministic-search"
++import { scopedExport, validateExportRequest } from "./canonical-tools/scoped-export"
+ import { requireTransportMemoryAddAuthority } from "@/lib/auth/mcp-authenticator"
+ import {
+   checkBudget,
+@@ -978,116 +979,16 @@
+ }
+ 
+ /**
+- * 8. memory_export
+- *
+- * Export memories filtered by group_id and optional canonical status.
+- * canonical_only=true  → Neo4j only; throws DatabaseUnavailableError if Neo4j is down.
+- * canonical_only=false → Both stores; deduplicates by memory_id (Neo4j wins).
++ * Export only the authenticated workspace. Semantic IDs win collisions; the
++ * merged ID-ordered page is bounded and failures retain explicit coverage meta.
+  */
+ export async function memory_export(request: MemoryExportRequest): Promise<MemoryExportResponse> {
+-  const groupId = validateGroupId(request.group_id)
+-  const limit = Math.min(request.limit ?? 1000, 10000)
+-  const offset = request.offset ?? 0
+-  const exportedAt = new Date().toISOString()
+-
+-  const { pg, neo4j: neo4jDriver } = await getConnections()
+-  const graphAdapter = createGraphAdapter({ pg, neo4j: neo4jDriver ?? undefined })
+-
+-  // Canonical memories from graph layer
+-  let canonicalMemories: MemoryGetResponse[] = []
+-  let graphFailed = false
+-
+-  try {
+-    const graphResult = await graphAdapter.exportMemories({
+-      group_id: groupId,
+-      user_id: request.user_id ?? null,
+-      offset,
+-      limit,
+-    })
+-
+-    canonicalMemories = graphResult.memories.map((node) => ({
+-      id: node.id,
+-      content: node.content,
+-      score: node.score,
+-      source: "semantic" as const,
+-      provenance: node.provenance,
+-      user_id: node.user_id ?? "",
+-      created_at: node.created_at,
+-      version: node.version,
+-      usage_count: 0,
+-      recent_usage_count: null as number | null,
+-      tags: node.tags,
+-      meta: baseMeta(["graph"]),
+-    }))
+-  } catch (error) {
+-    if (request.canonical_only) {
+-      // canonical_only=true: no fallback — fail loudly
+-      throw new DatabaseUnavailableError("memory_export:graph", error instanceof Error ? error : undefined)
+-    }
+-    console.warn("[degraded] Graph adapter unavailable in memory_export:", error)
+-    graphFailed = true
+-  }
+-
+-  if (request.canonical_only) {
+-    return {
+-      memories: canonicalMemories,
+-      count: canonicalMemories.length,
+-      exported_at: exportedAt,
+-      canonical_count: canonicalMemories.length,
+-      episodic_count: 0,
+-      meta: baseMeta(["graph"]),
+-    }
+-  }
+-
+-  // Episodic memories from PostgreSQL
+-  const canonicalIds = new Set(canonicalMemories.map((m) => m.id))
+-
+-  const pgResult = await tenantPgQuery<EpisodicMemoryRow>(
+-    groupId, request.user_id ?? "api", pg,
+-    `SELECT metadata->>'memory_id' AS id,
+-            metadata->>'content' AS content,
+-            metadata->>'source' AS provenance,
+-            metadata->>'user_id' AS user_id,
+-            metadata->>'tags' AS tags,
+-            created_at
+-     FROM events
+-     WHERE group_id = $1
+-       AND event_type = 'memory_add'
+-       AND ($2::text IS NULL OR metadata->>'user_id' = $2)
+-     ORDER BY created_at DESC
+-     LIMIT $3 OFFSET $4`,
+-    [groupId, request.user_id ?? null, limit, offset],
+-    request.scope?.workspace_id
+-  )
+-
+-  // Deduplicate: Neo4j wins on collision
+-  const episodicMemories: MemoryGetResponse[] = pgResult.rows
+-    .filter((row) => !canonicalIds.has(row.id as MemoryId))
+-    .map((row) => ({
+-      id: toMemoryId(row.id),
+-      content: row.content,
+-      score: 0.5,
+-      source: "episodic" as const,
+-      provenance: toProvenance(row.provenance),
+-      user_id: row.user_id ?? "",
+-      created_at: row.created_at,
+-      version: 1,
+-      usage_count: 0,
+-      recent_usage_count: null as number | null,
+-      tags: parseEpisodicTags(row.tags),
+-    }))
+-
+-  const allMemories = [...canonicalMemories, ...episodicMemories]
+-  const exportMeta = graphFailed ? degradedMeta(["postgres"]) : baseMeta(["postgres", "graph"])
+-
+-  return {
+-    memories: allMemories,
+-    count: allMemories.length,
+-    exported_at: exportedAt,
+-    canonical_count: canonicalMemories.length,
+-    episodic_count: episodicMemories.length,
+-    meta: exportMeta,
+-  }
++  validateGroupId(request.group_id)
++  const { workspaceId, principalId } = validateExportRequest(request)
++  return scopedExport(request, async (sql, values) => {
++    const { pg } = await getConnections()
++    return tenantPgQuery(request.group_id, principalId, pg, sql, values, workspaceId)
++  }, getGraphBackend())
+ }
+ 
+ // ── 9. memory_restore ────────────────────────────────────────────────────────
+--- /dev/null
++++ b/src/mcp/canonical-tools/scoped-export.ts
+@@ -0,0 +1,155 @@
++import { Buffer } from 'node:buffer'
++import { classifyPostgresError, DatabaseQueryError, DatabaseUnavailableError } from '../../lib/errors/database-errors'
++import type { MemoryExportRequest, MemoryExportResponse, MemoryGetResponse } from '../../lib/memory/canonical-contracts'
++import { permissionDenied, type Execute } from './deterministic-search'
++
++export const MAX_EXPORT_OFFSET = 100000
++
++// Fetch each source in the SAME ID order used by the merge, before applying the
++// global offset. With unique IDs per source, the first offset+limit+1 IDs from
++// each source suffice for the merged page, even with cross-source collisions.
++export const SEMANTIC_EXPORT_SQL = `
++SELECT m.id::text AS id, m.content, m.score, m.provenance, m.user_id,
++       m.created_at, m.version, m.tags, 'semantic'::text AS source
++FROM graph_memories m
++WHERE m.group_id=$1 AND m.workspace_id=$2 AND m.workspace_scope_state='workspace_scoped'
++  AND ($4::boolean=false OR m.user_id=$3)
++  AND m.deleted_at IS NULL AND m.deprecated=false
++  AND NOT EXISTS (
++    SELECT 1 FROM graph_supersedes s
++    WHERE s.group_id=$1 AND s.workspace_id=$2
++      AND s.workspace_scope_state='workspace_scoped' AND s.superseded_id=m.id)
++ORDER BY m.id::text COLLATE "C" ASC LIMIT $5`
++
++export const EPISODIC_EXPORT_SQL = `
++WITH records AS (
++  SELECT DISTINCT ON (e.metadata->>'memory_id')
++    e.metadata->>'memory_id' AS id, e.metadata->>'content' AS content,
++    0.5::float8 AS score, e.metadata->>'source' AS provenance,
++    e.metadata->>'user_id' AS user_id, e.created_at, 1 AS version,
++    e.metadata->'tags' AS tags, 'episodic'::text AS source
++  FROM events e
++  WHERE e.group_id=$1 AND e.workspace_id=$2
++    AND e.event_type='memory_add' AND e.metadata->>'user_id'=$3
++    AND ($4::boolean=false OR e.metadata->>'user_id'=$3)
++    AND e.metadata->>'memory_id' IS NOT NULL
++    AND COALESCE((
++      SELECT l.event_type FROM events l
++      WHERE l.group_id=$1 AND l.workspace_id=$2 AND l.metadata->>'user_id'=$3
++        AND l.metadata->>'memory_id'=e.metadata->>'memory_id'
++        AND l.event_type IN ('memory_delete','memory_restore')
++      ORDER BY l.created_at DESC, l.id DESC LIMIT 1
++    ), 'memory_restore') <> 'memory_delete'
++  ORDER BY e.metadata->>'memory_id', e.created_at ASC, e.id ASC
++)
++SELECT * FROM records ORDER BY id COLLATE "C" ASC LIMIT $5`
++
++/** Scope is supplied by the authenticated MCP boundary, never caller arguments. */
++export function validateExportRequest(request: MemoryExportRequest) {
++  const scope = request.scope
++  if (!/^allura-[a-z0-9_-]+$/.test(request.group_id)
++    || !scope || scope.group_id !== request.group_id
++    || typeof scope.workspace_id !== 'string' || !scope.workspace_id.trim()
++    || typeof scope.agent_id !== 'string' || !scope.agent_id.trim()) {
++    throw new Error('verified MCP workspace scope is required')
++  }
++  if (request.user_id !== undefined && request.user_id !== scope.agent_id) {
++    throw new Error('permission denied: principal mismatch')
++  }
++  if (request.canonical_only !== undefined && typeof request.canonical_only !== 'boolean') throw new Error('canonical_only must be boolean')
++  if (request.format !== undefined && request.format !== 'json') throw new Error('only json export is supported')
++  const requestedLimit = request.limit ?? 1000
++  const offset = request.offset ?? 0
++  if (!Number.isSafeInteger(requestedLimit) || requestedLimit < 1) throw new Error('limit must be a positive safe integer')
++  if (!Number.isSafeInteger(offset) || offset < 0 || offset > MAX_EXPORT_OFFSET) throw new Error(`offset must be an integer between 0 and ${MAX_EXPORT_OFFSET}`)
++  return { workspaceId: scope.workspace_id, principalId: scope.agent_id, limit: Math.min(requestedLimit, 10000), offset }
++}
++
++function mapExportRow(row: Record<string, any>): MemoryGetResponse {
++  const date = new Date(row.created_at)
++  const score = Number(row.score), version = Number(row.version)
++  if (typeof row.id !== 'string' || !row.id || typeof row.content !== 'string'
++    || !Number.isFinite(date.getTime()) || !Number.isFinite(score) || score < 0 || score > 1
++    || !Number.isSafeInteger(version) || version < 1
++    || !['semantic', 'episodic'].includes(row.source)) throw new Error('invalid export record')
++  let tags = row.tags
++  if (typeof tags === 'string') { try { tags = JSON.parse(tags) } catch { tags = [] } }
++  return {
++    id: row.id, content: row.content, score, source: row.source,
++    provenance: row.provenance === 'manual' ? 'manual' : 'conversation',
++    user_id: row.user_id ?? '', created_at: date.toISOString(), version,
++    usage_count: 0, recent_usage_count: null,
++    tags: Array.isArray(tags) ? tags.filter((tag: unknown) => typeof tag === 'string') : [],
++  } as MemoryGetResponse
++}
++
++function queryCanceled(error: unknown): boolean {
++  const seen = new Set<object>()
++  let current = error
++  while (current !== null && typeof current === 'object' && !seen.has(current)) {
++    seen.add(current)
++    const detail = current as { code?: unknown; cause?: unknown }
++    if (detail.code === '57014') return true
++    current = detail.cause
++  }
++  return false
++}
++
++/** Executes only through a restricted, tenant/workspace/principal-bound executor. */
++export async function scopedExport(request: MemoryExportRequest, execute: Execute, backend: string): Promise<MemoryExportResponse> {
++  const { workspaceId, principalId, limit, offset } = validateExportRequest(request)
++  const values = [request.group_id, workspaceId, principalId, request.user_id !== undefined, offset + limit + 1]
++  const attempted: ('graph' | 'postgres')[] = [], used: ('graph' | 'postgres')[] = [], warnings: string[] = []
++  let rows: MemoryGetResponse[] = []
++  async function source(store: 'graph' | 'postgres', sql: string) {
++    attempted.push(store)
++    let result
++    try { result = await execute(sql, values) }
++    catch (error) {
++      // Never convert authorization denials or retired/programming errors into
++      // a successful partial export or an apparent backend outage.
++      if (permissionDenied(error)) throw error
++      if (queryCanceled(error)) {
++        throw new DatabaseQueryError(`memory_export:${store}`, sql, error instanceof Error ? error : new Error(String(error)))
++      }
++      if (!(error instanceof DatabaseUnavailableError)) {
++        const classified = classifyPostgresError(error instanceof Error ? error : new Error(String(error)), `memory_export:${store}`, sql)
++        if (!(classified instanceof DatabaseUnavailableError)) throw classified
++      }
++      if (request.canonical_only) throw error instanceof DatabaseUnavailableError ? error : new DatabaseUnavailableError('memory_export:graph', error as Error)
++      warnings.push(`${store}_unavailable`)
++      return
++    }
++    const mapped = result.rows.map(mapExportRow)
++    rows = rows.concat(mapped)
++    used.push(store)
++  }
++  if (backend !== 'ruvector') {
++    // This repair is deliberately not a resurrection of the retired graph API.
++    if (request.canonical_only) throw new Error('memory_export: unsupported graph backend')
++    warnings.push('unsupported_graph_backend')
++  } else await source('graph', SEMANTIC_EXPORT_SQL)
++  if (!request.canonical_only) await source('postgres', EPISODIC_EXPORT_SQL)
++  if (used.length === 0) throw new DatabaseUnavailableError('memory_export:no_sources')
++
++  // Semantic wins by memory ID, independent of timestamps and page boundaries.
++  const unique = new Map<string, MemoryGetResponse>()
++  for (const row of rows) if (!unique.has(row.id) || row.source === 'semantic') unique.set(row.id, row)
++  const pageLimited = unique.size > offset + limit
++  const memories = [...unique.values()]
++    .sort((a, b) => Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)))
++    .slice(offset, offset + limit)
++  const canonicalCount = memories.filter(row => row.source === 'semantic').length
++  return {
++    memories, count: memories.length, exported_at: new Date().toISOString(),
++    canonical_count: canonicalCount, episodic_count: memories.length - canonicalCount,
++    meta: {
++      contract_version: 'v1', degraded: warnings.length > 0,
++      ...(warnings.includes('graph_unavailable') ? { degraded_reason: 'graph_unavailable' as const } : {}),
++      stores_used: used, stores_attempted: attempted, warnings,
++      covered_sources: used.map(store => store === 'graph' ? 'current_semantic' : 'principal_episodic'),
++      coverage_limitations: ['id_order_offset_pagination_not_snapshot_isolated', ...(pageLimited ? ['export_page_limited'] : []), ...warnings],
++      incomplete: warnings.length > 0 || pageLimited,
++    },
++  }
++}
