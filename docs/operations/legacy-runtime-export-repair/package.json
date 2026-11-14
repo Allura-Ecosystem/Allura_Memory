@@ -1,0 +1,11 @@
+{
+  "name": "isolated-legacy-export-repair",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "test:repair": "python3 scripts/validate.py",
+    "verify": "python3 verify-bundle.py"
+  },
+  "devDependencies": {"@electric-sql/pglite": "0.3.14", "@types/node": "24.3.0", "@types/pg": "8.18.0", "pg": "8.16.3", "typescript": "5.9.2", "vitest": "2.1.9"}
+}

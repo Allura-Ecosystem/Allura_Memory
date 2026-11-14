@@ -1,0 +1,4 @@
+/node_modules/
+/.validation/
+/__pycache__/
+/tests/__pycache__/
